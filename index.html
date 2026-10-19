@@ -1,0 +1,1961 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>USB-C Dock Failure Explained</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Interactive engineering training module: why a USB-C dock kept charging but lost USB and displays, and why a long power-button hold fixed it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=JetBrains+Mono:wght@400;700&display=swap">
+<style>
+/* Layout concept: a single dark "solder-mask" sheet — sticky figure index on the left,
+   each figure framed like a drawing sheet with a title block. Deliberately single-theme (dark PCB). */
+:root {
+  color-scheme: dark;
+  --bg: #06100b; --sheet: #091610; --sheet-2: #0c1d15; --line: #1f3a2c; --line-2: #2c5541;
+  --ink: #d5e1d8; --ink-2: #97ad9f; --ink-3: #62796b; --silk: #e9f0e6;
+  --pwr: #3ddc84; --aux: #f2c230; --main: #4ea2ff; --io: #b07cff; --fail: #ff4f4f; --off: #56645c; --warn: #ff9f1a;
+  --f-head: 'Archivo', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif;
+  --f-body: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.55;
+  background-image: radial-gradient(circle at 1px 1px, #0f2419 1px, transparent 1.2px); background-size: 22px 22px;
+}
+.wrap { max-width: 1480px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+a { color: var(--main); }
+code { font-family: var(--f-mono); font-size: .9em; color: var(--silk); background: #0f241a; padding: 1px 5px; border-radius: 3px; }
+
+/* hero */
+.hero { border-bottom: 1px solid var(--line); background: linear-gradient(180deg, #07160e, var(--bg)); }
+.hero .wrap { padding-block: 40px 28px; display: grid; gap: 16px; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .14em; color: var(--ink-2); }
+h1 { margin: 0; font-family: var(--f-head); font-stretch: 72%; font-weight: 800; font-size: clamp(38px, 6.4vw, 84px); line-height: .95; letter-spacing: .01em; color: var(--silk); text-transform: uppercase; text-wrap: balance; }
+h1 span { color: var(--pwr); text-shadow: 0 0 22px rgba(61, 220, 132, .35); }
+.lede { margin: 0; max-width: 68ch; font-size: 17px; color: #c3d2c8; }
+.caveat { margin: 0; font-family: var(--f-mono); font-size: 12.5px; color: var(--aux); max-width: 90ch; }
+.incident { display: flex; flex-wrap: wrap; align-items: stretch; gap: 14px; }
+.inc-col { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--sheet); min-width: 0; }
+.inc-label { font-family: var(--f-mono); font-size: 11px; letter-spacing: .12em; color: var(--ink-2); }
+.inc-arrow { display: grid; grid-template-columns: auto auto; align-content: center; gap: 4px 12px; font-family: var(--f-mono); font-size: 12px; padding: 0 6px; }
+.inc-arrow span { color: var(--ink-2); }
+.bad-t { color: var(--fail); } .ok-t { color: var(--pwr); }
+.pill { display: inline-flex; align-items: center; gap: 6px; font-family: var(--f-mono); font-size: 12.5px; font-weight: 700; letter-spacing: .04em; padding: 5px 12px; border-radius: 999px; border: 1.5px solid; background: var(--bg); white-space: nowrap; }
+.pill.ok { color: var(--pwr); border-color: var(--pwr); box-shadow: 0 0 10px rgba(61, 220, 132, .25); }
+.pill.bad { color: var(--fail); border-color: var(--fail); box-shadow: 0 0 10px rgba(255, 79, 79, .25); }
+.pill.warn { color: var(--warn); border-color: var(--warn); }
+.pill.off { color: #8a998f; border-color: var(--off); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); }
+.legend i { display: inline-block; width: 22px; height: 6px; border-radius: 3px; margin-right: 7px; vertical-align: middle; }
+
+/* layout */
+.layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 28px; padding-block: 28px; }
+.toc { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; max-height: 100vh; overflow-y: auto; padding-block: 8px; display: flex; flex-direction: column; gap: 1px; font-family: var(--f-mono); font-size: 12.5px; }
+.toc-h { margin-top: 14px; margin-bottom: 4px; font-size: 10.5px; letter-spacing: .14em; color: var(--aux); }
+.toc a { color: var(--ink-2); text-decoration: none; padding: 3px 8px; border-left: 2px solid var(--line); }
+.toc a:hover, .toc a:focus-visible { color: var(--silk); border-left-color: var(--pwr); outline: none; }
+.toc a.active { color: var(--silk); border-left-color: var(--pwr); background: #0c1d15; }
+main { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+.part { margin: 18px 0 -6px; font-family: var(--f-head); font-stretch: 75%; font-weight: 800; font-size: 30px; letter-spacing: .04em; text-transform: uppercase; color: var(--silk); display: flex; align-items: center; gap: 14px; }
+.part::after { content: ""; flex: 1; height: 1px; background: var(--line-2); }
+
+/* figure sheet */
+.fig { border: 1px solid var(--line); border-radius: 12px; background: var(--sheet); overflow: hidden; scroll-margin-top: 12px; }
+.fig-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px 16px; background: var(--sheet-2); border-bottom: 1px solid var(--line); }
+.fig-no { font-family: var(--f-mono); font-weight: 700; font-size: 12px; letter-spacing: .1em; color: var(--bg); background: var(--aux); padding: 3px 8px; border-radius: 3px; }
+.fig-head h3 { margin: 0; font-family: var(--f-head); font-stretch: 80%; font-weight: 700; font-size: 21px; letter-spacing: .02em; color: var(--silk); text-wrap: balance; }
+.kind { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .12em; color: var(--ink-3); margin-right: auto; }
+.viz { overflow-x: auto; padding: 10px; }
+.fig-svg { display: block; width: 100%; height: auto; min-width: 720px; }
+.poster .fig-svg { min-width: 900px; }
+.cap { margin: 0; padding: 4px 18px 16px; max-width: 110ch; font-size: 13.5px; color: var(--ink-2); }
+.foot { padding-block: 10px 40px; color: var(--ink-3); font-size: 12.5px; font-family: var(--f-mono); }
+
+/* controls */
+button { font: inherit; }
+.fig-head button, .controls button, .sim-btns button {
+  font-family: var(--f-mono); font-size: 12px; letter-spacing: .04em; color: var(--ink); background: #0f241a; border: 1px solid var(--line-2);
+  border-radius: 6px; padding: 6px 11px; cursor: pointer;
+}
+.fig-head button:hover, .controls button:hover, .sim-btns button:hover { border-color: var(--pwr); color: var(--silk); }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--silk); outline-offset: 2px; }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 16px 0; font-family: var(--f-mono); font-size: 12.5px; color: var(--ink-2); }
+.controls output { color: var(--silk); font-weight: 700; margin-left: 4px; font-variant-numeric: tabular-nums; }
+.controls input[type=range] { width: min(260px, 100%); accent-color: var(--aux); }
+.controls select { font-family: var(--f-mono); font-size: 12.5px; background: #0f241a; color: var(--ink); border: 1px solid var(--line-2); border-radius: 6px; padding: 5px 8px; }
+.seg button.on { background: var(--silk); color: var(--bg); border-color: var(--silk); font-weight: 700; }
+.chk { display: inline-flex; gap: 6px; align-items: center; color: var(--ink); }
+.chk input { accent-color: var(--pwr); }
+
+/* split figure + info panel */
+.split { display: grid; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; }
+.split.wide { grid-template-columns: minmax(0, 1fr) 320px; }
+.info { margin: 10px 10px 10px 0; padding: 16px; border: 1px solid var(--line-2); border-radius: 10px; background: #08130e; font-size: 13.5px; min-width: 0; }
+.info h4 { margin: 0 0 4px; font-family: var(--f-head); font-stretch: 80%; font-size: 20px; color: var(--silk); }
+.info .sub { font-family: var(--f-mono); font-size: 11px; letter-spacing: .1em; color: var(--ink-3); margin-bottom: 10px; }
+.info dl { margin: 0; display: grid; gap: 10px; }
+.info dt { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .12em; color: var(--aux); }
+.info dd { margin: 2px 0 0; color: var(--ink); }
+.info ul { margin: 4px 0 0; padding-left: 18px; }
+.info .chipline { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-block; font-family: var(--f-mono); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; border: 1px solid currentColor; }
+.chip.pwr { color: var(--pwr); } .chip.aux { color: var(--aux); } .chip.off { color: #8a998f; } .chip.warn { color: var(--warn); } .chip.fail { color: var(--fail); } .chip.main { color: var(--main); }
+.mode-note { color: var(--silk); font-family: var(--f-mono); font-size: 12.5px; }
+
+/* sources table */
+.srcs { padding: 0 16px 6px; overflow-x: auto; }
+.srcs table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 620px; }
+.srcs th, .srcs td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+.srcs th { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .12em; color: var(--ink-3); font-weight: 400; }
+.srcs td.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; color: var(--silk); white-space: nowrap; }
+.srcs .cap { padding: 8px 0 10px; }
+
+/* simulator */
+.sim { display: grid; gap: 6px; }
+.sim-btns { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 16px 0; }
+.sim-btns .hot { border-color: var(--aux); color: var(--aux); }
+.sim-btns .ghost { background: transparent; color: var(--ink-2); }
+.sim-status { display: flex; flex-wrap: wrap; gap: 10px; padding: 10px 16px 0; align-items: stretch; }
+.sim-chip { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px; border: 1px solid var(--line-2); border-radius: 8px; background: #08130e; font-family: var(--f-mono); font-size: 13px; color: var(--silk); min-width: 150px; }
+.sim-chip b { font-size: 10px; letter-spacing: .12em; color: var(--ink-3); font-weight: 400; }
+.sim-chip.fail { border-color: var(--fail); color: var(--fail); box-shadow: 0 0 12px rgba(255, 79, 79, .2); }
+.sim-chip.pwr { border-color: var(--pwr); color: var(--pwr); }
+.sim-chip.warn { border-color: var(--warn); color: var(--warn); }
+.sim-chip.off { color: #a6b4ab; }
+.sim-pills { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sim-svg { min-width: 760px; }
+.sim-log { margin: 0 16px 8px; padding: 10px 14px 10px 30px; max-height: 210px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; background: #050c08; font-family: var(--f-mono); font-size: 12px; color: var(--ink); }
+.sim-log li { padding: 2px 0; }
+.sim-t { color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.sim-log .ok { color: var(--pwr); } .sim-log .fail { color: var(--fail); } .sim-log .warn { color: var(--warn); } .sim-log .aux { color: var(--aux); }
+
+/* myth cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; padding: 16px; }
+.card { position: relative; min-height: 230px; perspective: 1200px; cursor: pointer; border: none; background: none; padding: 0; text-align: left; color: inherit; }
+.card-in { position: absolute; inset: 0; transition: transform .6s; transform-style: preserve-3d; }
+.card.flipped .card-in { transform: rotateY(180deg); }
+.face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.face.front { background: repeating-linear-gradient(45deg, #1a0b0b, #1a0b0b 10px, #150909 10px, #150909 20px); border: 1.5px solid var(--fail); }
+.face.back { background: #0a1a12; border: 1.5px solid var(--pwr); transform: rotateY(180deg); }
+.face .lbl { font-family: var(--f-mono); font-size: 11px; letter-spacing: .14em; font-weight: 700; }
+.face.front .lbl { color: var(--fail); } .face.back .lbl { color: var(--pwr); }
+.face q, .face p { margin: 0; font-family: var(--f-head); font-stretch: 85%; font-size: 20px; line-height: 1.25; color: var(--silk); }
+.face small { margin-top: auto; font-family: var(--f-mono); font-size: 11.5px; color: var(--ink-2); line-height: 1.45; }
+@media (prefers-reduced-motion: reduce) { .card-in { transition: none; } }
+
+/* tooltip */
+.tooltip { position: fixed; z-index: 20; max-width: 320px; padding: 8px 10px; border-radius: 6px; background: #020604; border: 1px solid var(--line-2); font-family: var(--f-mono); font-size: 12px; color: var(--silk); pointer-events: none; }
+
+/* responsive */
+@media (max-width: 1100px) {
+  .split, .split.wide { grid-template-columns: minmax(0, 1fr); }
+  .info { margin: 0 10px 10px; }
+}
+@media (max-width: 860px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .toc { position: static; max-height: none; flex-direction: row; flex-wrap: nowrap; overflow-x: auto; gap: 6px; padding-bottom: 6px; }
+  .toc-h { display: none; }
+  .toc a { white-space: nowrap; border: 1px solid var(--line); border-radius: 999px; }
+  .inc-arrow { grid-template-columns: auto auto; }
+}
+
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">ENGINEERING TRAINING MODULE · USB-C / PLATFORM POWER · REV A</div>
+    <h1>USB-C Dock Failure, <span>Explained</span></h1>
+    <p class="lede">HP USB-C Dock G5 on a Windows business laptop. Charging kept working, but USB, Ethernet and displays vanished, and the dock didn’t appear in Device Manager at all. A restart didn’t help. Holding the power button for about 45 seconds brought everything back.</p>
+    <div class="incident" aria-label="Incident summary">
+      <div class="inc-col">
+        <div class="inc-label">BEFORE</div>
+        <span class="pill ok">CHARGING ✓</span><span class="pill bad">USB · LAN ✕</span><span class="pill bad">DISPLAYS ✕</span><span class="pill bad">DOCK NOT IN DEVICE MANAGER</span>
+      </div>
+      <div class="inc-arrow"><span>RESTART</span><b class="bad-t">no change</b><span>HOLD POWER ≈ 45 s</span><b class="ok-t">fixed</b></div>
+      <div class="inc-col">
+        <div class="inc-label">AFTER</div>
+        <span class="pill ok">CHARGING ✓</span><span class="pill ok">USB · LAN ✓</span><span class="pill ok">DISPLAYS ✓</span>
+      </div>
+    </div>
+    <p class="caveat">Representative architecture, not one specific laptop. The reset narrows the suspects. It does not prove which controller failed.</p>
+    <div class="legend" aria-label="Colour code">
+      <span><i style="background:var(--pwr)"></i>power / working</span>
+      <span><i style="background:var(--aux)"></i>auxiliary / always-on</span>
+      <span><i style="background:var(--main)"></i>main system rails</span>
+      <span><i style="background:var(--io)"></i>USB-C / high-speed data</span>
+      <span><i style="background:var(--fail)"></i>failure / stuck</span>
+      <span><i style="background:var(--off)"></i>powered down</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout wrap">
+  <nav class="toc" aria-label="Figures">
+    <div class="toc-h">A · HARDWARE</div>
+    <a href="#f01">01 Motherboard</a><a href="#f02">02 USB-C cutaway</a><a href="#f03">03 Dock cutaway</a>
+    <div class="toc-h">B · INCIDENT</div>
+    <a href="#f04">04 Normal sequence</a><a href="#f05">05 Failure state</a>
+    <div class="toc-h">C · THE RESET</div>
+    <a href="#f06">06 Restart vs reset</a><a href="#f07">07 Power tree</a><a href="#f08">08 Off ≠ 0 V</a><a href="#f09">09 Power button</a><a href="#f10">10 Voltage decay</a><a href="#f11">11 Discharge path</a><a href="#f12">12 Volatile state</a><a href="#f13">13 Reset depth</a><a href="#f14">14 OEM timeline</a><a href="#f15">15 Why 45 s</a>
+    <div class="toc-h">D · DIAGNOSE</div>
+    <a href="#f16">16 Decision tree</a><a href="#f17">17 Before / after</a>
+    <div class="toc-h">E · EXPLORE</div>
+    <a href="#f18">18 Exploded view</a><a href="#f19">19 Interactive board</a><a href="#f20">20 Rail simulator</a>
+    <div class="toc-h">F · CONCLUSIONS</div>
+    <a href="#f21">21 Hypotheses</a><a href="#f22">22 Myths</a><a href="#master">★ Master poster</a>
+  </nav>
+
+  <main>
+    <h2 class="part">A · The hardware</h2>
+
+    <section class="fig" id="f01">
+      <div class="fig-head"><span class="fig-no">FIG 01</span><h3>Master PCB motherboard</h3><span class="kind">SVG · incident state</span><button class="copy" data-copy="f01" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f01"></div>
+      <p class="cap">Power enters at J1, becomes VSYS, then splits into always-on (yellow) and main (blue) rails. The red parts are the PD controller, mux and retimer, which sit on the path shared by USB and DisplayPort. The power button is only a dashed logic line to the EC.</p>
+    </section>
+
+    <section class="fig" id="f02">
+      <div class="fig-head"><span class="fig-no">FIG 02</span><h3>USB-C connector cutaway</h3><span class="kind">SVG</span><button class="copy" data-copy="f02" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f02"></div>
+      <p class="cap">USB-C Type-C receptacle pinout (A1–A12 / B12–B1). The four SuperSpeed pairs are shared: the mux gives them to USB 3 or to DisplayPort.</p>
+    </section>
+
+    <section class="fig" id="f03">
+      <div class="fig-head"><span class="fig-no">FIG 03</span><h3>HP USB-C Dock G5 cutaway</h3><span class="kind">SVG · verified vs representative</span><button class="copy" data-copy="f03" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f03"></div>
+      <p class="cap">Ports, power levels and the three firmware-updatable controllers come from HP’s datasheet and SoftPaq notes. The hub, NIC, audio and lane-split blocks are shown dashed because their chips aren’t publicly confirmed.</p>
+    </section>
+
+    <h2 class="part">B · The incident</h2>
+
+    <section class="fig" id="f04">
+      <div class="fig-head"><span class="fig-no">FIG 04</span><h3>Normal USB-C bring-up</h3><span class="kind">ANIMATED</span><button class="play" data-play="f04" type="button">▶ Play sequence</button><button class="copy" data-copy="f04" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f04"></div>
+    </section>
+
+    <section class="fig" id="f05">
+      <div class="fig-head"><span class="fig-no">FIG 05</span><h3>Failure state</h3><span class="kind">SVG</span><button class="copy" data-copy="f05" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f05"></div>
+      <p class="cap">Next time, before resetting: open Device Manager → View → Devices by connection, and check “USB Connector Managers” for an error on the UCM-UCSI device. Then unplug and replug the dock once. If a replug alone fixes it, the stuck state was cleared by a detach rather than by power loss.</p>
+    </section>
+
+    <h2 class="part">C · The reset</h2>
+
+    <section class="fig" id="f06">
+      <div class="fig-head"><span class="fig-no">FIG 06</span><h3>Why a Windows restart may not fix it</h3><span class="kind">SPLIT SCREEN</span><button class="copy" data-copy="f06" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f06"></div>
+      <p class="cap">Restart is a warm reset of the CPU and OS. With Fast Startup, Windows “Shut down” is a hybrid hibernate. With a dock attached, the PD controller must stay powered to keep charging, so neither path is guaranteed to clear it.</p>
+    </section>
+
+    <section class="fig" id="f07">
+      <div class="fig-head"><span class="fig-no">FIG 07</span><h3>Power rail map</h3><span class="kind">SVG</span><button class="copy" data-copy="f07" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f07"></div>
+    </section>
+
+    <section class="fig" id="f08">
+      <div class="fig-head"><span class="fig-no">FIG 08</span><h3>“Off” does not always mean 0 V</h3><span class="kind">SVG</span><button class="copy" data-copy="f08" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f08"></div>
+    </section>
+
+    <section class="fig" id="f09">
+      <div class="fig-head"><span class="fig-no">FIG 09</span><h3>Power-button electrical path</h3><span class="kind">MYTH VS REALITY</span><button class="copy" data-copy="f09" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f09"></div>
+    </section>
+
+    <section class="fig" id="f10">
+      <div class="fig-head"><span class="fig-no">FIG 10</span><h3>Capacitor / rail voltage decay</h3><span class="kind">INTERACTIVE CHART</span><button class="copy" data-copy="f10" type="button">Copy SVG</button></div>
+      <div class="controls">
+        <label for="vth">Retention threshold <output id="vth-out">1.20 V</output></label>
+        <input id="vth" type="range" min="0.5" max="2.8" step="0.05" value="1.2">
+        <label for="tau">Time constant τ = RC</label>
+        <select id="tau"></select>
+      </div>
+      <div class="viz" data-fig="f10"></div>
+      <p class="cap">Hover the curve to read V(t). Only the shape is general. The threshold and τ are illustrative, because real rails depend on capacitance, load and any active-discharge FET.</p>
+    </section>
+
+    <section class="fig" id="f11">
+      <div class="fig-head"><span class="fig-no">FIG 11</span><h3>What actually discharges the rail</h3><span class="kind">INTERACTIVE</span><button class="copy" data-copy="f11" type="button">Copy SVG</button></div>
+      <div class="controls seg" role="group" aria-label="Regulator state">
+        <button type="button" data-reg="on">Regulator ON</button><button type="button" data-reg="off" class="on">Regulator OFF</button>
+      </div>
+      <div class="viz" data-fig="f11"></div>
+    </section>
+
+    <section class="fig" id="f12">
+      <div class="fig-head"><span class="fig-no">FIG 12</span><h3>Volatile vs non-volatile state</h3><span class="kind">INTERACTIVE</span><button class="copy" data-copy="f12" type="button">Copy SVG</button></div>
+      <div class="controls seg" role="group" aria-label="Power domain">
+        <button type="button" data-dom="on">Domain powered</button><button type="button" data-dom="off" class="on">Domain collapses</button>
+      </div>
+      <div class="viz" data-fig="f12"></div>
+    </section>
+
+    <section class="fig" id="f13">
+      <div class="fig-head"><span class="fig-no">FIG 13</span><h3>Reset types are not interchangeable</h3><span class="kind">MATRIX</span><button class="copy" data-copy="f13" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f13"></div>
+    </section>
+
+    <section class="fig" id="f14">
+      <div class="fig-head"><span class="fig-no">FIG 14</span><h3>OEM reset timeline</h3><span class="kind">TIMELINE · SOURCED</span><button class="copy" data-copy="f14" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f14"></div>
+      <div class="srcs">
+        <table>
+          <thead><tr><th>Platform</th><th>Procedure</th><th>Hold</th><th>Source</th></tr></thead>
+          <tbody>
+            <tr><td>All ACPI PCs</td><td>Power-button override → soft-off</td><td class="num">&gt; 4 s</td><td><a href="https://uefi.org/specs/ACPI/6.5/04_ACPI_Hardware_Specification.html" target="_blank" rel="noopener">ACPI 6.5 §4.8.2.2.1.3</a></td></tr>
+            <tr><td>HP notebooks</td><td>Power (hard) reset, AC unplugged</td><td class="num">≈ 15 s</td><td><a href="https://support.hp.com/au-en/document/ish_1997208-1551050-16" target="_blank" rel="noopener">HP Support</a></td></tr>
+            <tr><td>Dell</td><td>Hard reset / flea-power drain</td><td class="num">15–20 s</td><td><a href="https://www.dell.com/support/kbdoc/en-us/000139016/how-to-perform-hard-reset" target="_blank" rel="noopener">Dell KB 000139016</a></td></tr>
+            <tr><td>Dell (select laptops)</td><td>RTC reset, AC connected; aborts if &lt; 25 s or &gt; 40 s</td><td class="num">30–35 s</td><td><a href="https://www.dell.com/support/kbdoc/en-us/000125880/" target="_blank" rel="noopener">Dell KB 000125880</a></td></tr>
+            <tr><td>Lenovo ThinkPad</td><td>Emergency-reset pinhole, AC removed</td><td class="num">not stated</td><td><a href="https://support.lenovo.com/lc/en/solutions/ht510479-device-does-not-restart-after-bios-update" target="_blank" rel="noopener">Lenovo HT510479</a></td></tr>
+            <tr><td>Surface (Pro 5th gen+, Laptop…)</td><td>Force restart until logo</td><td class="num">≈ 20 s</td><td><a href="https://support.microsoft.com/help/4036280" target="_blank" rel="noopener">Microsoft 4036280</a></td></tr>
+            <tr><td>Surface (Pro 4 and earlier)</td><td>Power + volume-up</td><td class="num">≈ 15 s</td><td><a href="https://support.microsoft.com/help/4036280" target="_blank" rel="noopener">Microsoft 4036280</a></td></tr>
+          </tbody>
+        </table>
+        <p class="cap">Not plotted: HP and Lenovo EC-reset timings that only appear second-hand on forums.</p>
+      </div>
+    </section>
+
+    <section class="fig" id="f15">
+      <div class="fig-head"><span class="fig-no">FIG 15</span><h3>Why 45 seconds may have worked</h3><span class="kind">TIMELINE</span><button class="copy" data-copy="f15" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f15"></div>
+    </section>
+
+    <h2 class="part">D · Diagnose</h2>
+
+    <section class="fig" id="f16">
+      <div class="fig-head"><span class="fig-no">FIG 16</span><h3>Diagnostic decision tree</h3><span class="kind">CLICKABLE</span><button class="reset-tree" type="button">Show incident path</button><button class="copy" data-copy="f16" type="button">Copy SVG</button></div>
+      <div class="split">
+        <div class="viz" data-fig="f16"></div>
+        <aside class="info" id="tree-info" aria-live="polite"></aside>
+      </div>
+      <p class="cap">Click a question to flip its answer, or a box for what to check next.</p>
+    </section>
+
+    <section class="fig" id="f17">
+      <div class="fig-head"><span class="fig-no">FIG 17</span><h3>Before · reset · after</h3><span class="kind">3-PANEL</span><button class="copy" data-copy="f17" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f17"></div>
+    </section>
+
+    <h2 class="part">E · Explore</h2>
+
+    <section class="fig" id="f18">
+      <div class="fig-head"><span class="fig-no">FIG 18</span><h3>Exploded laptop view</h3><span class="kind">ISOMETRIC SVG</span><button class="copy" data-copy="f18" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f18"></div>
+      <p class="cap">A vector stand-in for the photoreal render. The matching image-generation prompt is in <a href="https://github.com/pavelkondratyukrepo/USB4/blob/main/docs/image-prompts.md">docs/image-prompts.md</a>.</p>
+    </section>
+
+    <section class="fig" id="f19">
+      <div class="fig-head"><span class="fig-no">FIG 19</span><h3>Interactive motherboard</h3><span class="kind">CLICK ANY PART</span></div>
+      <div class="controls seg modes" role="group" aria-label="Board mode">
+        <button type="button" data-mode="normal">Normal</button><button type="button" data-mode="failure" class="on">Dock failure</button><button type="button" data-mode="restart">Windows restart</button><button type="button" data-mode="hardreset">Hard reset</button><button type="button" data-mode="coldboot">Cold boot</button>
+      </div>
+      <div class="split wide">
+        <div class="viz" data-fig="f19"></div>
+        <aside class="info" id="part-info" aria-live="polite"></aside>
+      </div>
+      <p class="cap mode-note" id="mode-note"></p>
+    </section>
+
+    <section class="fig" id="f20">
+      <div class="fig-head"><span class="fig-no">FIG 20</span><h3>Power-rail simulator</h3><span class="kind">LIVE SIMULATION</span></div>
+      <div class="sim" id="sim">
+        <div class="sim-btns" role="group" aria-label="Actions">
+          <button type="button" data-act="on">System on</button>
+          <button type="button" data-act="restart">Windows restart</button>
+          <button type="button" data-act="shutdown">Windows shutdown</button>
+          <button type="button" data-act="ac">Remove / attach dock</button>
+          <button type="button" data-act="hold10">Hold power 10 s</button>
+          <button type="button" data-act="hold15">Hold power 15 s</button>
+          <button type="button" data-act="hold30">Hold power 30 s</button>
+          <button type="button" data-act="hold45" class="hot">Hold power 45 s</button>
+          <button type="button" data-act="cold">Cold boot</button>
+          <button type="button" data-act="reset" class="ghost">↺ Reset to incident</button>
+        </div>
+        <div class="controls">
+          <label class="chk"><input type="checkbox" id="sim-ac" checked> Dock attached (VBUS present)</label>
+          <label for="sim-deep">Deep-reset threshold <output id="sim-deep-out">15 s</output></label>
+          <input id="sim-deep" type="range" min="5" max="40" step="1" value="15">
+          <label for="sim-tau">Controller-rail decay τ</label>
+          <select id="sim-tau"><option value="0.05">50 ms (strong load)</option><option value="0.5">0.5 s</option><option value="2" selected>2 s (weak bleed)</option><option value="8">8 s (almost no bleed)</option></select>
+          <label for="sim-speed">Speed</label>
+          <select id="sim-speed"><option value="1">×1 real time</option><option value="3">×3</option><option value="6" selected>×6</option><option value="12">×12</option></select>
+        </div>
+        <div class="sim-status"></div>
+        <div class="viz"><svg class="sim-svg fig-svg" viewBox="0 0 1200 570" role="img" aria-label="Rail voltages over the last 60 seconds"></svg></div>
+        <ol class="sim-log" aria-live="polite"></ol>
+      </div>
+      <p class="cap">Conceptual representative model. Actual rail sequencing is platform-specific. Try a 15 s hold, then a 45 s hold. With the default settings the 15 s hold reaches the threshold but leaves no time for the rail to decay.</p>
+    </section>
+
+    <h2 class="part">F · Conclusions</h2>
+
+    <section class="fig" id="f21">
+      <div class="fig-head"><span class="fig-no">FIG 21</span><h3>Root-cause hypothesis map</h3><span class="kind">CLICK A HYPOTHESIS</span><button class="copy" data-copy="f21" type="button">Copy SVG</button></div>
+      <div class="split">
+        <div class="viz" data-fig="f21"></div>
+        <aside class="info" id="hypo-info" aria-live="polite"></aside>
+      </div>
+      <p class="cap">Green means consistent with the evidence, not proven. The dock’s absence from Device Manager moved the scoring. USB 2.0 needs no Alt Mode and bypasses the mux, so Alt Mode or the mux alone can’t explain it. The break is earlier, in the connection state the PD controller reports.</p>
+    </section>
+
+    <section class="fig" id="f22">
+      <div class="fig-head"><span class="fig-no">FIG 22</span><h3>Myth vs reality</h3><span class="kind">FLIP CARDS</span></div>
+      <div class="cards" id="cards"></div>
+    </section>
+
+    <section class="fig master-sec" id="master">
+      <div class="fig-head"><span class="fig-no">★</span><h3>Master infographic</h3><span class="kind">2400 px POSTER</span><button class="copy" data-copy="master" type="button">Copy SVG</button></div>
+      <div class="viz poster" data-fig="master"></div>
+      <p class="cap">Download the poster as <a href="export/master-infographic.svg">SVG</a>, <a href="export/master-infographic.png">PNG (4800 px)</a> or <a href="export/master-infographic.pdf">PDF</a>. Every figure is also exported as its own SVG and PNG in the <code>export/</code> folder.</p>
+    </section>
+  </main>
+</div>
+<footer class="foot wrap">
+  <p>Sources: ACPI 6.5 · HP USB-C Dock G5 datasheet and SoftPaq firmware notes · HP, Dell, Lenovo and Microsoft support documents (linked under FIG 14). All board-level drawings are representative.</p>
+</footer>
+<div class="tooltip" id="tooltip" hidden></div>
+
+<script>
+/* ===== core.js ===== */
+/* core.js — palette, shared SVG stylesheet, <defs>, and drawing primitives.
+   Every figure is an SVG string built from these helpers so the same art can be
+   rendered in the page, nested into the master infographic, and exported. */
+
+const P = {
+  bg: '#06100b', board: '#0a2216', boardHi: '#0e2c1c', maskLine: '#1c4a31',
+  silk: '#e9f0e6', ink: '#d5e1d8', ink2: '#97ad9f', ink3: '#62796b',
+  copper: '#c4813f', pad: '#d8b66c', pkg: '#111416', pkgTop: '#1a1e21',
+  pwr: '#3ddc84', aux: '#f2c230', main: '#4ea2ff', io: '#b07cff',
+  fail: '#ff4f4f', off: '#56645c', warn: '#ff9f1a', panel: '#0b1912', line: '#24402f', dp: '#46d7e6'
+};
+const ROLE = { dp: P.dp, pwr: P.pwr, aux: P.aux, main: P.main, io: P.io, fail: P.fail, off: P.off, warn: P.warn, ink: P.ink, sig: '#c9d6cc', dim: '#2f4a3b' };
+
+const FONT_MONO = "'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace";
+const FONT_HEAD = "'Archivo', 'Arial Narrow', 'Helvetica Neue', Arial, sans-serif";
+
+const SVG_CSS = `
+.t{font-family:${FONT_MONO};fill:${P.silk};font-size:12px;letter-spacing:.02em}
+.th{font-family:${FONT_HEAD};font-weight:700;font-stretch:78%;letter-spacing:.03em;fill:${P.silk}}
+.ts{font-size:10px}.tm{font-size:14px}.tl{font-size:17px}.txl{font-size:24px}.txxl{font-size:36px}.tw{font-weight:700}
+.mid{text-anchor:middle}.end{text-anchor:end}
+.c-dim{fill:${P.ink2}}.c-mute{fill:${P.ink3}}.c-pwr{fill:${P.pwr}}.c-aux{fill:${P.aux}}.c-main{fill:${P.main}}
+.c-io{fill:${P.io}}.c-fail{fill:${P.fail}}.c-off{fill:#7f8f86}.c-warn{fill:${P.warn}}.c-ink{fill:${P.ink}}.c-bg{fill:${P.bg}}
+.tr{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.pad{fill:${P.pad}}.pkg{fill:${P.pkg};stroke:#2b3236;stroke-width:1}.pkg-top{fill:${P.pkgTop}}
+.pin1{fill:#3a4247}.ic-l{font-family:${FONT_MONO};font-size:11px;font-weight:700;fill:${P.silk}}
+.ic-s{font-family:${FONT_MONO};font-size:8.5px;fill:${P.ink2}}
+.silk{fill:none;stroke:${P.silk};stroke-opacity:.55;stroke-width:1}
+.box{fill:#0c1b14;stroke:${P.line};stroke-width:1.2}
+.box2{fill:#0f241a;stroke:#2c5541;stroke-width:1.2}
+.hit{cursor:pointer}.hit:hover .pkg-top,.hit:focus .pkg-top{fill:#26313a}
+.hit:focus{outline:none}.hit:focus-visible .ring{stroke:#fff;stroke-width:2.5;opacity:1}
+.flow{stroke-dasharray:3 13;animation:flow 1.1s linear infinite}
+.flow-slow{stroke-dasharray:3 13;animation:flow 2.4s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-16}}
+.pulse{animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}}
+.boot{animation:bootOn .9s ease-out both}
+@keyframes bootOn{from{stroke:${P.off};opacity:.35}}
+.fade-in{animation:fadeIn .5s ease-out both}
+@keyframes fadeIn{from{opacity:0}}
+@media (prefers-reduced-motion: reduce){.flow,.flow-slow,.pulse,.boot,.fade-in{animation:none}}
+`;
+
+/* Shared defs: filters, patterns, arrow markers, icons. Inserted once per page
+   (hidden host svg) and copied into exported standalone SVGs. */
+function arrowMarker(id, color) {
+  return `<marker id="${id}" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${color}"/></marker>`;
+}
+const SVG_DEFS = `
+<filter id="glow" filterUnits="userSpaceOnUse" x="-3000" y="-3000" width="9000" height="9000"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="glowBig" filterUnits="userSpaceOnUse" x="-3000" y="-3000" width="9000" height="9000"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+<filter id="shadow" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000" flood-opacity=".55"/></filter>
+<pattern id="pcbTex" width="24" height="24" patternUnits="userSpaceOnUse"><rect width="24" height="24" fill="${P.board}"/><path d="M0 12H24M12 0V24" stroke="${P.boardHi}" stroke-width=".6"/><circle cx="12" cy="12" r=".9" fill="#174a30"/></pattern>
+<pattern id="hatchRed" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="rgba(255,79,79,.10)"/><line x1="0" y1="0" x2="0" y2="8" stroke="${P.fail}" stroke-width="2" stroke-opacity=".55"/></pattern>
+<pattern id="hatchGray" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="${P.off}" stroke-width="1.5" stroke-opacity=".6"/></pattern>
+<pattern id="hatchYel" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><line x1="0" y1="0" x2="0" y2="8" stroke="${P.aux}" stroke-width="1.5" stroke-opacity=".5"/></pattern>
+<linearGradient id="metal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cfd6da"/><stop offset=".5" stop-color="#8b959b"/><stop offset="1" stop-color="#5d666b"/></linearGradient>
+<linearGradient id="cell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2c3a33"/><stop offset="1" stop-color="#18211c"/></linearGradient>
+<linearGradient id="die" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5a6670"/><stop offset=".45" stop-color="#2f363c"/><stop offset="1" stop-color="#4a545c"/></linearGradient>
+${Object.entries({ dp: P.dp, pwr: P.pwr, aux: P.aux, main: P.main, io: P.io, fail: P.fail, off: P.off, ink: P.ink, warn: P.warn, sig: '#c9d6cc' }).map(([k, c]) => arrowMarker('ar-' + k, c)).join('')}
+<symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13.5 2 4 14h6.5L9 22l11-13.5h-7z" fill="currentColor"/></symbol>
+<symbol id="i-usb" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22V4"/><path d="M9 6.5 12 2l3 4.5z" fill="currentColor"/><path d="M12 15 6.5 11.5V8.5"/><circle cx="6.5" cy="7" r="1.6" fill="currentColor"/><path d="M12 18l5.5-3.5V11"/><rect x="15.8" y="8" width="3.4" height="3.4" fill="currentColor"/><circle cx="12" cy="20.5" r="1.8" fill="currentColor"/></g></symbol>
+<symbol id="i-mon" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="2.5" y="3.5" width="19" height="13" rx="1.5"/><path d="M8.5 20.5h7M12 16.5v4" stroke-linecap="round"/></g></symbol>
+<symbol id="i-net" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 7h16v11H4z"/><path d="M8 18v-4h8v4M9 7V4h6v3"/></g></symbol>
+<symbol id="i-ok" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="m7 12.5 3.2 3.2L17 9" fill="none" stroke="#06100b" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="m8 8 8 8M16 8l-8 8" stroke="#06100b" stroke-width="2.6" stroke-linecap="round"/></symbol>
+<symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 2.5 22.5 21h-21z" fill="currentColor"/><path d="M12 9v5.5" stroke="#06100b" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="17.6" r="1.4" fill="#06100b"/></symbol>
+<symbol id="i-q" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M9.2 9.3a2.9 2.9 0 1 1 3.9 2.7c-.8.3-1.1.9-1.1 1.7v.5" fill="none" stroke="#06100b" stroke-width="2.3" stroke-linecap="round"/><circle cx="12" cy="17.3" r="1.3" fill="#06100b"/></symbol>
+<symbol id="i-btn" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v8"/><path d="M7.2 6.2a7.5 7.5 0 1 0 9.6 0"/></g></symbol>
+`;
+
+/* ---------- primitives ---------- */
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function T(x, y, s, cls = '', extra = '') { return `<text x="${x}" y="${y}" class="t ${cls}" ${extra}>${s}</text>`; }
+function TH(x, y, s, cls = '', extra = '') { return `<text x="${x}" y="${y}" class="th ${cls}" ${extra}>${s}</text>`; }
+/* multi-line text, lines separated by \n */
+function TL(x, y, s, lh, cls = '', extra = '') {
+  return `<text x="${x}" y="${y}" class="t ${cls}" ${extra}>` + String(s).split('\n').map((l, i) => `<tspan x="${x}" dy="${i ? lh : 0}">${l}</tspan>`).join('') + `</text>`;
+}
+function wire(d, role, w = 2, extra = '') { return `<path d="${d}" class="tr" stroke="${ROLE[role] || role}" stroke-width="${w}" ${extra}/>`; }
+function roleKey(role) { return ROLE[role] ? role : (Object.keys(ROLE).find(k => ROLE[k] === role && ['dp','pwr','aux','main','io','fail','off','ink','warn','sig'].includes(k)) || 'ink'); }
+function arrow(d, role, w = 2, extra = '') { return `<path d="${d}" class="tr" stroke="${ROLE[role] || role}" stroke-width="${w}" marker-end="url(#ar-${roleKey(role)})" ${extra}/>`; }
+function icon(id, x, y, s, color, extra = '') { return `<use href="#${id}" x="${x}" y="${y}" width="${s}" height="${s}" style="color:${color}" ${extra}/>`; }
+function svgWrap(w, h, inner, label, cls = '') {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" class="fig-svg ${cls}" role="img" aria-label="${esc(label)}">${inner}</svg>`;
+}
+/* status pill: icon + label + check/cross */
+function statusPill(x, y, kind, ok, label, w = 170) {
+  const ico = { pwr: 'i-bolt', usb: 'i-usb', dp: 'i-mon', net: 'i-net' }[kind];
+  const col = ok === true ? P.pwr : ok === 'warn' ? P.warn : ok === 'off' ? P.off : P.fail;
+  const mark = ok === true ? 'i-ok' : ok === 'warn' ? 'i-warn' : ok === 'off' ? 'i-q' : 'i-x';
+  return `<g transform="translate(${x},${y})"><rect width="${w}" height="34" rx="17" fill="${P.bg}" stroke="${col}" stroke-width="1.6"/>` +
+    icon(ico, 10, 7, 20, P.ink) + T(38, 22, label, 'tm tw') + icon(mark, w - 30, 7, 20, col) + `</g>`;
+}
+function tag(x, y, s, color, fill = P.bg, cls = 'ts') {
+  const w = s.length * 6.4 + 14;
+  return `<g transform="translate(${x},${y})"><rect x="0" y="-12" width="${w}" height="17" rx="3" fill="${fill}" stroke="${color}" stroke-width="1"/>${T(7, 0.5, s, cls, `style="fill:${color}"`)}</g>`;
+}
+
+/* ---------- PCB part packages ---------- */
+function qfn(x, y, w, h, o = {}) {
+  let s = '';
+  const n = o.pins || Math.max(3, Math.round(w / 10)), m = o.pinsV || Math.max(3, Math.round(h / 10));
+  for (let i = 0; i < n; i++) { const px = x + (w / (n + 1)) * (i + 1) - 2; s += `<rect x="${px}" y="${y - 3}" width="4" height="5" class="pad"/><rect x="${px}" y="${y + h - 2}" width="4" height="5" class="pad"/>`; }
+  for (let i = 0; i < m; i++) { const py = y + (h / (m + 1)) * (i + 1) - 2; s += `<rect x="${x - 3}" y="${py}" width="5" height="4" class="pad"/><rect x="${x + w - 2}" y="${py}" width="5" height="4" class="pad"/>`; }
+  s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" class="pkg"/><rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="${h - 4}" rx="2" class="pkg-top"/><circle cx="${x + 7}" cy="${y + 7}" r="2.2" class="pin1"/>`;
+  s += icText(x, y, w, h, o);
+  return s;
+}
+function lqfp(x, y, w, h, o = {}) {
+  let s = '';
+  const n = o.pins || Math.round(w / 6);
+  for (let i = 0; i < n; i++) {
+    const px = x + 8 + ((w - 16) / (n - 1)) * i - 1.2, py = y + 8 + ((h - 16) / (n - 1)) * i - 1.2;
+    s += `<rect x="${px}" y="${y - 9}" width="2.4" height="10" class="pad"/><rect x="${px}" y="${y + h - 1}" width="2.4" height="10" class="pad"/>`;
+    s += `<rect x="${x - 9}" y="${py}" width="10" height="2.4" class="pad"/><rect x="${x + w - 1}" y="${py}" width="10" height="2.4" class="pad"/>`;
+  }
+  s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" class="pkg"/><rect x="${x + 3}" y="${y + 3}" width="${w - 6}" height="${h - 6}" rx="2" class="pkg-top"/><circle cx="${x + 10}" cy="${y + 10}" r="3" class="pin1"/>`;
+  s += icText(x, y, w, h, o);
+  return s;
+}
+function soic(x, y, w, h, o = {}) {
+  let s = '';
+  for (let i = 0; i < 4; i++) { const px = x + 6 + i * ((w - 12) / 3) - 1.5; s += `<rect x="${px}" y="${y - 6}" width="3" height="7" class="pad"/><rect x="${px}" y="${y + h - 1}" width="3" height="7" class="pad"/>`; }
+  s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" class="pkg"/><rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="${h - 4}" rx="1" class="pkg-top"/><circle cx="${x + 5}" cy="${y + 5}" r="1.6" class="pin1"/>`;
+  s += icText(x, y, w, h, o);
+  return s;
+}
+function bga(x, y, w, h, o = {}) {
+  let s = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="#24301f" stroke="#3d4c33" stroke-width="1"/>`;
+  // substrate caps around the die
+  for (let i = 0; i < Math.floor(w / 14); i++) s += `<rect x="${x + 6 + i * 14}" y="${y + 5}" width="7" height="4" fill="#b59a6a"/><rect x="${x + 6 + i * 14}" y="${y + h - 9}" width="7" height="4" fill="#b59a6a"/>`;
+  (o.dies || [{ x: 10, y: 14, w: w - 20, h: h - 28 }]).forEach(d => {
+    s += `<rect x="${x + d.x}" y="${y + d.y}" width="${d.w}" height="${d.h}" rx="2" fill="url(#die)" stroke="#6b7782" stroke-width=".8"/>`;
+    if (d.label) s += T(x + d.x + d.w / 2, y + d.y + d.h / 2 + 4, d.label, 'mid ts tw', `style="fill:#e9f0e6"`);
+  });
+  if (o.label) s += T(x + w / 2, y + h + 16, o.label, 'mid tw');
+  return s;
+}
+function icText(x, y, w, h, o) {
+  let s = '';
+  if (o.label) s += `<text x="${x + w / 2}" y="${y + h / 2 + (o.sub ? -1 : 4)}" class="ic-l mid">${o.label}</text>`;
+  if (o.sub) s += `<text x="${x + w / 2}" y="${y + h / 2 + 11}" class="ic-s mid">${o.sub}</text>`;
+  return s;
+}
+function inductor(x, y, s = 40, mark = 'R47') {
+  return `<rect x="${x}" y="${y}" width="${s}" height="${s}" rx="4" fill="#2a2f31" stroke="#454c50"/><rect x="${x + 4}" y="${y + 4}" width="${s - 8}" height="${s - 8}" rx="3" fill="#33393c"/>` +
+    `<text x="${x + s / 2}" y="${y + s / 2 + 4}" class="t ts mid" style="fill:#aab3b6">${mark}</text>`;
+}
+function cap(x, y, v = false) {
+  return v ? `<rect x="${x}" y="${y}" width="4" height="8" fill="#a8865a"/><rect x="${x}" y="${y}" width="4" height="2" fill="#d6d9da"/><rect x="${x}" y="${y + 6}" width="4" height="2" fill="#d6d9da"/>`
+    : `<rect x="${x}" y="${y}" width="8" height="4" fill="#a8865a"/><rect x="${x}" y="${y}" width="2" height="4" fill="#d6d9da"/><rect x="${x + 6}" y="${y}" width="2" height="4" fill="#d6d9da"/>`;
+}
+function via(x, y) { return `<circle cx="${x}" cy="${y}" r="3.2" fill="${P.pad}"/><circle cx="${x}" cy="${y}" r="1.4" fill="${P.bg}"/>`; }
+function hole(x, y) { return `<circle cx="${x}" cy="${y}" r="11" fill="${P.pad}" opacity=".85"/><circle cx="${x}" cy="${y}" r="6" fill="${P.bg}"/>`; }
+/* PCB trace with optional glow + animated current overlay */
+function trace(d, role, w = 4, o = {}) {
+  const c = ROLE[role] || role;
+  let s = `<path d="${d}" class="tr ${o.cls || ''}" stroke="${c}" stroke-width="${w}" ${role === 'off' ? 'stroke-opacity=".7"' : ''} ${o.glow !== false && role !== 'off' ? 'filter="url(#glow)"' : ''} ${o.dash ? `stroke-dasharray="${o.dash}"` : ''} ${o.style ? `style="${o.style}"` : ''}/>`;
+  if (o.flow && role !== 'off') s += `<path d="${d}" class="tr flow" stroke="#ffffff" stroke-opacity=".75" stroke-width="${Math.max(1.2, w * 0.35)}" ${o.style ? `style="${o.style}"` : ''}/>`;
+  return s;
+}
+/* differential pair: two parallel polylines offset by gap */
+function pair(points, role, gap = 5, w = 1.8, o = {}) {
+  const off = (pts, k) => pts.map(([x, y], i) => {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+    let dx = b[0] - a[0], dy = b[1] - a[1]; const L = Math.hypot(dx, dy) || 1; dx /= L; dy /= L;
+    return [x - dy * k, y + dx * k];
+  });
+  const toD = pts => 'M' + pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' L');
+  return trace(toD(off(points, gap / 2)), role, w, o) + trace(toD(off(points, -gap / 2)), role, w, o);
+}
+
+/* ===== board.js ===== */
+/* board.js — the master PCB-style motherboard (FIG 01) and its interactive
+   twin (FIG 19). One renderer, five operating modes. */
+
+const BOARD_PARTS = {
+  port:   { box: [40, 296, 60, 100],  name: 'USB-C PORT' },
+  pd:     { box: [136, 166, 80, 80],  name: 'USB-C PD CONTROLLER' },
+  mux:    { box: [118, 436, 66, 66],  name: 'MUX' },
+  rt:     { box: [196, 436, 72, 66],  name: 'RETIMER' },
+  chg:    { box: [296, 466, 149, 78], name: 'CHARGER / POWER PATH' },
+  auxreg: { box: [496, 326, 68, 68],  name: 'ALWAYS-ON (AUX) REGULATOR' },
+  pmic:   { box: [516, 96, 153, 98],  name: 'PMIC / MAIN REGULATORS' },
+  ec:     { box: [319, 239, 122, 122], name: 'EMBEDDED CONTROLLER (EC)' },
+  spi:    { box: [351, 160, 70, 44],  name: 'SPI FLASH (BIOS / EC FIRMWARE)' },
+  rtc:    { box: [589, 539, 52, 52],  name: 'RTC / CMOS CELL' },
+  vrm:    { box: [696, 232, 200, 48], name: 'CPU VRM' },
+  cpu:    { box: [756, 292, 228, 198], name: 'CPU / SoC' },
+  usbctl: { box: [908, 332, 64, 114], name: 'USB CONTROLLER (xHCI)' },
+  gpu:    { box: [1016, 292, 120, 186], name: 'GPU' },
+  bat:    { box: [296, 686, 608, 108], name: 'BATTERY PACK' },
+  btn:    { box: [126, 706, 64, 64],   name: 'POWER BUTTON' }
+};
+
+/* net -> role per mode; comp -> state per mode */
+const BOARD_MODES = {
+  normal: {
+    label: 'NORMAL', note: 'Contract up, lanes routed, everything enumerated.',
+    net: { pdrail: 'aux', vbus: 'pwr', vbat: 'pwr', vsys: 'pwr', aux: 'aux', main: 'main', ior: 'main', vcore: 'main', hs: 'io', cc: 'io', sig: 'sig', pbtn: 'sig' },
+    comp: { pd: 'ok', mux: 'ok', rt: 'ok' }, ep: [true, true, true], flow: true
+  },
+  failure: {
+    label: 'DOCK FAILURE', note: 'Power contract fine. Connection / data-role state wrong: nothing enumerates, not even USB 2.0.',
+    net: { pdrail: 'aux', vbus: 'pwr', vbat: 'pwr', vsys: 'pwr', aux: 'aux', main: 'main', ior: 'main', vcore: 'main', hs: 'fail', cc: 'io', sig: 'sig', pbtn: 'sig' },
+    comp: { pd: 'fail', mux: 'fail', rt: 'fail' }, ep: [true, false, false], flow: true
+  },
+  restart: {
+    label: 'WINDOWS RESTART', note: 'CPU + OS reset. Always-on domain and its stuck state never lose power.',
+    net: { pdrail: 'aux', vbus: 'pwr', vbat: 'pwr', vsys: 'pwr', aux: 'aux', main: 'main', ior: 'main', vcore: 'warn', hs: 'fail', cc: 'io', sig: 'sig', pbtn: 'sig' },
+    comp: { pd: 'fail', mux: 'fail', rt: 'fail', cpu: 'warn', usbctl: 'warn' }, ep: [true, false, false], flow: true
+  },
+  hardreset: {
+    label: 'HARD RESET', note: 'Forced off: main + I/O rails collapse, PD/mux state cleared (platform-dependent).',
+    net: { pdrail: 'off', vbus: 'pwr', vbat: 'pwr', vsys: 'pwr', aux: 'aux', main: 'off', ior: 'off', vcore: 'off', hs: 'off', cc: 'off', sig: 'sig', pbtn: 'warn' },
+    comp: { pd: 'off', mux: 'off', rt: 'off', cpu: 'off', usbctl: 'off', gpu: 'off', vrm: 'off', pmic: 'off', ec: 'live', auxreg: 'live', btn: 'warn' }, ep: [true, 'off', 'off'], flow: false
+  },
+  coldboot: {
+    label: 'COLD BOOT', note: 'Rails ramp in order. CC → PD → Alt Mode → USB → Windows, from a clean state.',
+    net: { pdrail: 'aux', vbus: 'pwr', vbat: 'pwr', vsys: 'pwr', aux: 'aux', main: 'main', ior: 'main', vcore: 'main', hs: 'io', cc: 'io', sig: 'sig', pbtn: 'sig' },
+    comp: { pd: 'ok', mux: 'ok', rt: 'ok' }, ep: [true, true, true], flow: true, boot: true
+  }
+};
+
+const STATE_COLOR = { ok: P.pwr, fail: P.fail, warn: P.warn, off: P.off, live: P.aux };
+
+function boardSVG(mode = 'failure', opt = {}) {
+  const M = BOARD_MODES[mode];
+  const r = k => M.net[k];
+  const boot = M.boot ? { pdrail: 1.3, aux: 0, vsys: 0, vbat: 0, vbus: 0, main: .5, vcore: .9, ior: 1.2, cc: 1.5, hs: 2.0, sig: 0, pbtn: 0 } : null;
+  const tr = (d, net, w, extra = {}) => trace(d, r(net), w, Object.assign({ flow: M.flow && opt.flow !== false && ['vbus', 'vbat', 'vsys', 'aux', 'hs'].includes(net), cls: boot ? 'boot' : '', style: boot ? `animation-delay:${boot[net]}s` : '' }, extra));
+  const pr = (pts, net, gap, w) => pair(pts, r(net), gap, w, { flow: M.flow && opt.flow !== false && net === 'hs', cls: boot ? 'boot' : '', style: boot ? `animation-delay:${boot[net]}s` : '' });
+  const sig = (d, net = 'sig') => `<path d="${d}" class="tr${boot ? ' boot' : ''}${net === 'pbtn' && mode === 'hardreset' ? ' pulse' : ''}" stroke="${ROLE[r(net)]}" stroke-width="1.4" stroke-dasharray="5 4"/>`;
+  const st = id => (M.comp[id] || 'on');
+  const dimmed = id => st(id) === 'off' ? 'opacity="0.42"' : '';
+  const hitOpen = id => opt.interactive ? `<g class="hit" data-id="${id}" tabindex="0" role="button" aria-label="${BOARD_PARTS[id].name}">` : `<g data-id="${id}">`;
+  const ring = id => {
+    const s = st(id); const [x, y, w, h] = BOARD_PARTS[id].box;
+    if (s === 'on') return opt.interactive ? `<rect class="ring" x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="transparent" stroke="#ffffff" stroke-opacity="0" stroke-width="1"/>` : '';
+    const c = STATE_COLOR[s];
+    return (s === 'fail' ? `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="url(#hatchRed)"/>` : '') +
+      `<rect class="ring ${s === 'warn' || (s === 'fail' && mode !== 'restart') ? 'pulse' : ''}" x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${opt.interactive ? 'transparent' : 'none'}" stroke="${c}" stroke-width="2.2" ${s === 'off' ? 'stroke-dasharray="5 4"' : ''} ${s === 'fail' || s === 'ok' ? 'filter="url(#glow)"' : ''}/>`;
+  };
+  const part = (id, body) => hitOpen(id) + `<g ${dimmed(id)}>${body}</g>` + ring(id) + `</g>`;
+
+  let s = '';
+  /* legend + title strip */
+  if (opt.legend !== false) {
+    const L = [['pwr', 'POWER SOURCE / WORKING'], ['aux', 'ALWAYS-ON (AUX)'], ['main', 'MAIN (S0) RAILS'], ['io', 'USB-C HIGH-SPEED I/O'], ['fail', 'FAILED / STUCK'], ['off', 'POWERED DOWN']];
+    L.forEach(([k, l], i) => { const x = 70 + i * 180; s += `<rect x="${x}" y="22" width="22" height="6" rx="3" fill="${ROLE[k]}" ${k !== 'off' ? 'filter="url(#glow)"' : ''}/>` + T(x + 30, 30, l, 'ts c-dim'); });
+    s += T(1150, 52, `MODE · ${M.label}`, 'end tw', `style="fill:${mode === 'normal' || mode === 'coldboot' ? P.pwr : mode === 'hardreset' ? P.aux : P.fail}"`);
+  }
+  /* thermal module in the board cut-out */
+  s += `<g opacity=".55"><rect x="880" y="78" width="256" height="146" rx="14" fill="#0d1512" stroke="#2c3b34"/><circle cx="1010" cy="151" r="62" fill="#0a0f0d" stroke="#3a4a42"/>`;
+  for (let i = 0; i < 9; i++) s += `<path d="M1010,151 q${(30 * Math.cos(i * 0.698)).toFixed(1)},${(30 * Math.sin(i * 0.698)).toFixed(1)} ${(52 * Math.cos(i * 0.698 + .5)).toFixed(1)},${(52 * Math.sin(i * 0.698 + .5)).toFixed(1)}" stroke="#4a5a52" stroke-width="7" fill="none" stroke-linecap="round"/>`;
+  s += `<circle cx="1010" cy="151" r="16" fill="#26302b"/>` + T(1010, 216, 'FAN / THERMAL MODULE', 'mid ts c-mute') + `</g>`;
+  /* board outline */
+  s += `<path d="M70,90 L90,70 H860 V230 H1130 L1150,250 V620 L1130,640 H90 L70,620 Z" fill="url(#pcbTex)" stroke="${P.maskLine}" stroke-width="2"/>`;
+  s += `<path d="M78,94 L94,78 H852 V238 H1126 L1142,254 V616 L1126,632 H94 L78,616 Z" fill="none" stroke="#16402a" stroke-width="1" stroke-dasharray="2 5"/>`;
+  [[110, 112], [820, 112], [1110, 282], [1110, 602], [110, 602], [700, 612]].forEach(([x, y]) => s += hole(x, y));
+  /* decorative copper pours + passives */
+  s += `<path d="M300,560 H445 V596 H300Z" fill="#c4813f" opacity=".07"/><path d="M700,520 H1000 V580 H700Z" fill="#c4813f" opacity=".06"/>`;
+  const caps = [[230, 180], [230, 196], [282, 520], [452, 470], [452, 530], [612, 205], [640, 205], [748, 300], [748, 320], [748, 470], [990, 300], [990, 320], [990, 440], [470, 400], [470, 416], [590, 330], [590, 346], [600, 120], [300, 210], [112, 520], [190, 520], [800, 545], [830, 545], [860, 545], [890, 545], [1050, 520], [1070, 520]];
+  caps.forEach(([x, y], i) => s += cap(x, y, i % 3 === 0));
+  [[250, 300], [470, 300], [700, 420], [990, 560], [600, 470], [140, 300], [1040, 600], [880, 600], [520, 560], [270, 120]].forEach(([x, y]) => s += via(x, y));
+  /* M.2 + silkscreen */
+  s += `<rect x="790" y="598" width="190" height="24" rx="2" fill="#151a17" stroke="#3b4a42"/>` + T(885, 614, 'M.2 SSD', 'mid ts c-mute');
+  s += T(96, 86, 'MB-REV A · 10L HDI', 'ts c-mute') + T(846, 86, 'U-SoC', 'end ts c-mute');
+
+  /* ---------- traces (drawn below parts) ---------- */
+  // battery cable + VBAT
+  s += tr('M340,690 V626', 'vbat', 7) + tr('M340,604 V542', 'vbat', 6);
+  // VBUS from connector to charger input
+  s += tr('M70,392 V585 L82,597 H262 V520 L277,505 H300', 'vbus', 6);
+  // charger -> inductor -> VSYS
+  s += tr('M380,505 H395', 'vsys', 6) + tr('M441,501 H1000 V454 H1030', 'vsys', 7) + tr('M530,501 V392', 'vsys', 4) + tr('M690,501 V256 H700', 'vsys', 5) + tr('M690,256 V210 H565 V192', 'vsys', 5);
+  // AUX
+  s += tr('M500,345 H432', 'aux', 3) + tr('M515,330 V222 H386', 'aux', 3) + tr('M386,222 H214', 'pdrail', 3) + tr('M386,222 V200', 'aux', 2.5);
+  // main S0 rails
+  s += tr('M665,120 H682 V340 H758', 'main', 4) + tr('M682,340 V585 H1126 V352 H1134', 'main', 3) + tr('M744,256 H760', 'vcore', 4);
+  s += tr('M780,276 V296', 'vcore', 5) + tr('M826,276 V296', 'vcore', 5) + tr('M872,276 V296', 'vcore', 5);
+  s += tr('M540,110 V92 H232 V440', 'ior', 3) + tr('M232,420 H151 V440', 'ior', 2.5);
+  // high-speed lanes + CC
+  s += pr([[758, 452], [266, 452]], 'hs', 5, 1.8) + pr([[758, 467], [266, 467]], 'hs', 5, 1.8) + pr([[200, 466], [180, 466]], 'hs', 5, 1.8);
+  s += pr([[122, 466], [104, 466], [104, 362], [96, 362]], 'hs', 5, 1.8);
+  s += tr('M88,300 V214 H138', 'cc', 2.2);
+  // logic signals
+  s += sig('M165,242 V438') + sig('M330,300 H222 V244') + sig('M430,270 H470 V150 H518') + sig('M350,350 V468') + sig('M500,605 V572 H390 V352', 'pbtn');
+  s += sig('M175,734 H262 V662 H515 V627', 'pbtn');
+  s += `<rect x="478" y="605" width="74" height="20" rx="2" fill="#e6e1d3"/>` + Array.from({ length: 7 }, (_, i) => `<rect x="${484 + i * 9.5}" y="609" width="5" height="12" fill="#2b2b2b"/>`).join('');
+
+  /* ---------- parts ---------- */
+  // USB-C receptacle
+  s += part('port', `<rect x="44" y="300" width="52" height="92" rx="12" fill="url(#metal)" stroke="#9aa4aa"/><rect x="51" y="311" width="18" height="70" rx="8" fill="#0a0d0e"/><rect x="57" y="321" width="6" height="50" rx="2" fill="#2d3a40"/>` +
+    Array.from({ length: 6 }, (_, i) => `<rect x="57.5" y="${324 + i * 8}" width="5" height="3" fill="${P.pad}"/>`).join('') + T(70, 414, 'J1 USB-C', 'mid ts tw'));
+  s += part('pd', qfn(140, 170, 72, 72, { label: 'PD CTRL', sub: 'CC·PD·ALT' }));
+  s += part('mux', qfn(122, 440, 58, 58, { label: 'MUX', sub: 'SS / DP' }));
+  s += part('rt', qfn(200, 440, 64, 58, { label: 'RETIMER', sub: 'HS lanes' }));
+  s += part('chg', qfn(300, 470, 80, 70, { label: 'CHARGER', sub: 'NVDC·SMBus' }) + inductor(395, 478, 46, '2R2') + `<rect x="305" y="552" width="30" height="20" fill="#1b1f22" stroke="#3a4247"/><rect x="345" y="552" width="30" height="20" fill="#1b1f22" stroke="#3a4247"/>` + T(340, 586, 'Q1  Q2', 'mid ts c-mute'));
+  s += `<g ${dimmed('chg')}><rect x="300" y="604" width="80" height="22" rx="2" fill="#e6e1d3"/>` + Array.from({ length: 8 }, (_, i) => `<rect x="${306 + i * 9}" y="608" width="5" height="14" fill="#2b2b2b"/>`).join('') + T(390, 620, 'BATT', 'ts c-dim') + `</g>`;
+  s += part('auxreg', qfn(500, 330, 60, 60, { label: 'AUX REG', sub: '3V3A·1V8A' }));
+  s += part('pmic', qfn(520, 110, 90, 80, { label: 'PMIC', sub: '5V·3V3·1V8' }) + inductor(625, 100, 40, '1R0') + inductor(625, 150, 40, '1R5'));
+  s += part('ec', lqfp(330, 250, 100, 100, { label: 'EC', sub: 'KBC · PWR SEQ' }));
+  s += part('spi', soic(355, 168, 62, 30, { label: 'SPI ROM' }));
+  s += part('rtc', `<circle cx="615" cy="565" r="24" fill="url(#metal)" stroke="#aab4b9"/><circle cx="615" cy="565" r="17" fill="none" stroke="#6f797e"/>` + T(615, 569, 'RTC', 'mid ts tw', 'style="fill:#1a1f22"'));
+  s += part('vrm', qfn(700, 238, 44, 36, { label: 'VR', pins: 3, pinsV: 3 }) + inductor(760, 236, 40, 'R22') + inductor(806, 236, 40, 'R22') + inductor(852, 236, 40, 'R22') + T(830, 228, 'CPU VRM · 3φ', 'mid ts c-dim'));
+  s += part('cpu', bga(760, 296, 220, 190, { dies: [{ x: 14, y: 18, w: 132, h: 150, label: 'CPU · iGPU' }] }) + T(830, 478, 'U1 SoC', 'mid ts c-dim'));
+  s += part('usbctl', `<rect x="912" y="336" width="56" height="106" rx="2" fill="url(#die)" stroke="#6b7782" stroke-width=".8"/>` + T(940, 384, 'PCH', 'mid ts tw') + T(940, 398, 'xHCI', 'mid ts c-dim') + T(940, 412, 'USB', 'mid ts c-dim'));
+  s += part('gpu', bga(1020, 296, 112, 112, { dies: [{ x: 16, y: 16, w: 80, h: 80, label: 'dGPU' }] }) + inductor(1030, 436, 36, 'R33') + inductor(1076, 436, 36, 'R33') + T(1076, 490, 'GPU VR · optional', 'mid ts c-mute'));
+  // heat pipe overlay
+  s += `<path d="M790,326 H960 L1004,214" stroke="#c4813f" stroke-opacity=".22" stroke-width="22" fill="none" stroke-linecap="round" ${dimmed('cpu')}/>`;
+  // battery pack + power button (off-board)
+  s += part('bat', `<rect x="300" y="690" width="600" height="100" rx="10" fill="#141c18" stroke="#34463c"/>` + [0, 1, 2].map(i => `<rect x="${312 + i * 196}" y="700" width="184" height="80" rx="8" fill="url(#cell)" stroke="#3f5246"/>`).join('') +
+    T(600, 736, 'BATTERY PACK · 3S/4S Li-ion', 'mid tw tm') + T(600, 756, 'VBAT ≈ 9–17 V (representative) · gas gauge + protection', 'mid ts c-dim'));
+  s += part('btn', `<circle cx="158" cy="738" r="26" fill="#121615" stroke="#5b6a62" stroke-width="2"/>` + icon('i-btn', 144, 724, 28, mode === 'hardreset' ? P.warn : P.ink) + T(158, 786, 'POWER BUTTON', 'mid ts tw'));
+
+  /* ---------- net labels ---------- */
+  s += tag(86, 625, 'VBUS 5–20 V', ROLE[r('vbus')]) + tag(350, 662, 'VBAT', ROLE[r('vbat')]) + tag(560, 524, 'VSYS · SYSTEM POWER BUS', ROLE[r('vsys')]);
+  s += tag(522, 282, '3V3_AUX · 1V8_AUX', ROLE[r('aux')]) + tag(600, 424, 'S0 RAILS', ROLE[r('main')]) + tag(902, 268, 'VCORE', ROLE[r('vcore')]);
+  s += tag(238, 404, 'I/O RAIL', ROLE[r('ior')]) + tag(560, 440, 'SS USB · DP LANES', ROLE[r('hs')]) + tag(92, 282, 'CC1/CC2', ROLE[r('cc')]);
+  s += tag(396, 592, 'PWR_BTN#', ROLE[r('pbtn')]) + tag(440, 142, 'EN / PG', ROLE.sig) + tag(232, 316, 'I²C', ROLE.sig);
+
+  /* ---------- endpoint status ---------- */
+  s += T(930, 662, 'AT THE DOCK', 'ts c-dim tw');
+  s += statusPill(930, 672, 'pwr', M.ep[0], 'CHARGING', 210) + statusPill(930, 714, 'usb', M.ep[1], 'USB · ETHERNET', 210) + statusPill(930, 756, 'dp', M.ep[2], 'DISPLAYS', 210);
+  if (opt.disclaimer !== false) s += T(70, 822, 'Representative modern business-laptop architecture — exact implementation varies by model.', 'ts c-dim');
+  return svgWrap(1200, 832, s, 'PCB-style laptop motherboard, mode ' + M.label, 'board');
+}
+
+/* ---------- FIG 19 component dossier ---------- */
+const PART_INFO = {
+  port: { does: 'Passive 24-pin receptacle. Carries VBUS, CC1/CC2, USB 2.0 D+/D−, four SuperSpeed pairs and SBU1/2 at once.', domain: ['none — passive'], shut: ['n/a'], stuck: 'Cannot hold logic state. Debris, wear or a half-seated plug can break individual pins while power still flows.', reset: ['NO effect', 'off'] },
+  pd: { does: 'USB-C port controller. Detects attach on CC, negotiates the PD power contract, runs Alt Mode discovery (Discover Identity → SVIDs → Modes → Enter Mode) and tells the mux what to route.', domain: ['3V3_AUX', 'or VBUS (dead-battery)'], shut: ['OFTEN YES', 'aux'], stuck: 'The power contract can stay valid while the connection / data-role state is wrong. If the host is never told “USB connected”, even USB 2.0 stays off — charging works, nothing enumerates, the dock is absent from Device Manager. Fits the incident.', reset: ['POSSIBLY', 'warn'], resetNote: 'If its supply collapses, or the EC/sequencer re-initialises it during cold boot. Not guaranteed while a dock keeps VBUS present.' },
+  mux: { does: 'Routes the four SuperSpeed lane pairs to USB 3 or DisplayPort according to plug orientation and the DP pin assignment (C = 4 DP lanes, D = 2 DP + USB 3).', domain: ['I/O rail', 'S0 / platform-specific'], shut: ['USUALLY NO', 'off'], stuck: 'Lanes routed wrong or not at all: SuperSpeed USB and DP vanish — but USB 2.0 bypasses the mux, so the dock would still appear in Device Manager. Weak fit alone.', reset: ['LIKELY', 'pwr'], resetNote: 'Loses its register configuration when its rail drops; rewritten by the PD controller after boot.' },
+  rt: { does: 'Retimer / redriver. Recovers and re-transmits multi-gigabit lanes so they survive board + cable loss. Present on many USB4/TBT designs; plain USB-C designs may use a redriver or nothing.', domain: ['I/O rail', 'S0'], shut: ['USUALLY NO', 'off'], stuck: 'Lane training fails: links never come up even though the connector is fine.', reset: ['LIKELY', 'pwr'] },
+  chg: { does: 'Narrow-VDC charger + power path. Picks VBUS or battery, builds the system bus (VSYS), charges the pack. Controlled by the EC over SMBus.', domain: ['VBUS in', 'VSYS out ≈ VBAT'], shut: ['YES', 'pwr'], stuck: 'Charging would misbehave. In this incident charging worked — evidence the charger path was healthy.', reset: ['NOT TYPICALLY', 'off'] },
+  auxreg: { does: 'Always-on regulators for the S5 / standby domain: 3V3_AUX, 1V8_AUX (names vary: _A, _DSW, _ALW).', domain: ['3V3_AUX', '1V8_AUX'], shut: ['YES', 'aux'], stuck: 'A regulator does not hold logic state, but it keeps everything downstream alive — including any stuck controller state.', reset: ['MAYBE', 'warn'], resetNote: 'Stays up while battery or adapter can feed it. Only battery disconnect / full drain guarantees collapse.' },
+  pmic: { does: 'Main regulators for S0/S3 rails (5 V, 3.3 V, 1.8 V, memory, VCCIO). Turned on in order by the EC / sequencer through EN and power-good (PG) lines.', domain: ['VSYS in', '5V · 3V3 · 1V8 out'], shut: ['NO (S5)', 'off'], stuck: 'A sequencing fault means no boot at all — not the incident pattern.', reset: ['YES', 'pwr'], resetNote: 'Disabled at forced-off: its rails collapse.' },
+  ec: { does: 'Embedded controller: a small always-on microcontroller. Watches the power button, runs power sequencing, battery / charger, keyboard, thermals; often talks to the PD controller over I²C and relays its connection status to the SoC and to Windows (UCSI).', domain: ['3V3_AUX'], shut: ['YES', 'aux'], stuck: 'Battery, keyboard, power-button or EC↔PD coordination glitches. It does not carry USB data.', reset: ['NO (usually)', 'off'], resetNote: 'It is the chip counting your button hold. Resetting the EC itself needs an OEM procedure, battery disconnect or pinhole.' },
+  spi: { does: 'Non-volatile flash holding BIOS/UEFI and often EC firmware. Read at boot.', domain: ['3V3_AUX / 1V8'], shut: ['DATA PERSISTS', 'pwr'], stuck: 'Flash does not get “stuck”; corrupted firmware is a different failure class.', reset: ['NO — non-volatile', 'off'] },
+  rtc: { does: 'Coin cell or RTC domain keeping the clock and CMOS/NVRAM settings (many modern designs fold this into the main battery).', domain: ['VCCRTC ≈ 3 V'], shut: ['YES', 'aux'], stuck: 'Wrong date/time or BIOS settings — unrelated to dock lanes.', reset: ['NO', 'off'], resetNote: 'A 45 s hold does not clear CMOS. Dell’s documented RTC reset is a 25–40 s window with AC connected.' },
+  vrm: { does: 'Multi-phase buck converter making VCORE for the CPU from VSYS.', domain: ['VSYS in', 'VCORE ≈ 0.6–1.4 V'], shut: ['NO', 'off'], stuck: 'Crash / no boot, not a dock symptom.', reset: ['YES', 'pwr'] },
+  cpu: { does: 'SoC: cores, integrated GPU (the DisplayPort source for Alt Mode), memory controller. On many current platforms the Type-C subsystem (mux, PD logic) is partly integrated.', domain: ['VCORE', 'S0 rails'], shut: ['NO', 'off'], stuck: 'OS hang or driver fault. A Windows restart resets it, so it is a weak sole explanation here.', reset: ['YES', 'pwr'] },
+  usbctl: { does: 'xHCI USB host controller inside the PCH / SoC. Enumerates the dock’s hub, Ethernet and USB devices.', domain: ['S0 rails'], shut: ['NO', 'off'], stuck: 'USB stops enumerating. But a Windows restart re-initialises xHCI, and it does not carry DisplayPort — inconsistent as the sole cause.', reset: ['YES', 'pwr'] },
+  gpu: { does: 'Optional discrete GPU. On most business laptops the USB-C DisplayPort comes from the iGPU; routing varies by design.', domain: ['GPU VR', 'S0'], shut: ['NO', 'off'], stuck: 'Would affect display only, not USB.', reset: ['YES', 'pwr'] },
+  bat: { does: 'Li-ion pack with fuel gauge and protection. Feeds the charger / VSYS and, through it, the always-on domain.', domain: ['VBAT ≈ 9–17 V'], shut: ['ALWAYS', 'pwr'], stuck: 'Gauge or protection faults affect charging, not dock lanes.', reset: ['NO', 'off'], resetNote: 'Holding the button does not drain the battery. Only battery disconnect / ship mode removes it.' },
+  btn: { does: 'A momentary switch that pulls the PWR_BTN# logic line low. The EC times how long it is held.', domain: ['logic: 3V3_AUX pull-up'], shut: ['n/a'], stuck: 'n/a', reset: ['TRIGGER ONLY', 'warn'], resetNote: 'It is a request, not a discharge path. The EC / sequencer decides what to switch off.' }
+};
+
+/* ===== figs-a.js ===== */
+/* figs-a.js — FIG 02–09 */
+
+const DPC = P.dp; // DisplayPort identity colour inside connector/dock figures (distinct from USB purple)
+
+/* generic labelled block */
+function block(x, y, w, h, o = {}) {
+  const c = ROLE[o.role] || o.role || P.line;
+  let s = `<g ${o.attrs || ''}><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${o.rx ?? 8}" fill="${o.fill || '#0c1b14'}" stroke="${c}" stroke-width="${o.sw || 1.6}" ${o.dash ? 'stroke-dasharray="6 5"' : ''} ${o.glow ? 'filter="url(#glow)"' : ''}/>`;
+  if (o.fillOver) s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${o.rx ?? 8}" fill="${o.fillOver}"/>`;
+  let ty = y + (o.lines ? 24 : h / 2 + 6);
+  if (o.title) s += `<text x="${o.left ? x + 14 : x + w / 2}" y="${ty}" class="th ${o.left ? '' : 'mid'}" style="font-size:${o.fs || 18}px;fill:${o.tc || P.silk}">${o.title}</text>`;
+  (o.lines || []).forEach((l, i) => s += T(o.left ? x + 14 : x + w / 2, ty + 20 + i * 16, l, `${o.left ? '' : 'mid'} ts c-dim`));
+  if (o.chip) s += tag(x + w - o.chip.length * 6.4 - 22, y + 4, o.chip, c);
+  return s + `</g>`;
+}
+function bigMark(x, y, ok, s = 44) {
+  const map = { true: ['i-ok', P.pwr], false: ['i-x', P.fail], warn: ['i-warn', P.warn], off: ['i-q', P.off] };
+  const [id, c] = map[String(ok)];
+  return icon(id, x, y, s, c, ok === false || ok === true ? 'filter="url(#glow)"' : '');
+}
+
+/* ================= FIG 02 — USB-C connector cutaway ================= */
+function fig02() {
+  const top = ['GND', 'TX1+', 'TX1−', 'VBUS', 'CC1', 'D+', 'D−', 'SBU1', 'VBUS', 'RX2−', 'RX2+', 'GND'];
+  const bot = ['GND', 'RX1+', 'RX1−', 'VBUS', 'SBU2', 'D−', 'D+', 'CC2', 'VBUS', 'TX2−', 'TX2+', 'GND'];
+  const grp = n => n === 'GND' ? 'gnd' : (n === 'VBUS' || n.startsWith('CC')) ? 'pwr' : (n === 'D+' || n === 'D−') ? 'usb' : n.startsWith('SBU') ? 'dp' : 'ss';
+  const col = { gnd: '#5d6a63', pwr: P.pwr, usb: P.io, dp: DPC };
+  let s = '';
+  s += TH(40, 52, 'ONE CONNECTOR ≠ ONE SUBSYSTEM', 'txl');
+  s += T(40, 76, 'USB-C receptacle, viewed face-on · 24 contacts · three independent jobs', 'ts c-dim');
+  // shell
+  s += `<rect x="40" y="130" width="500" height="200" rx="96" fill="url(#metal)" stroke="#aab4b9" stroke-width="2"/>`;
+  s += `<rect x="58" y="146" width="464" height="168" rx="80" fill="#07090a"/>`;
+  s += `<rect x="80" y="186" width="420" height="88" rx="10" fill="#1f2a30" stroke="#3c4a52"/>`;
+  const x0 = 98, pitch = 35;
+  top.forEach((n, i) => {
+    const g = grp(n), x = x0 + i * pitch, c = col[g];
+    s += g === 'ss' ? `<rect x="${x}" y="192" width="20" height="30" rx="2" fill="${P.io}"/><rect x="${x + 10}" y="192" width="10" height="30" rx="2" fill="${DPC}"/>` : `<rect x="${x}" y="192" width="20" height="30" rx="2" fill="${c}"/>`;
+    s += T(x + 10, 182, n, 'mid ts', `style="fill:${g === 'gnd' ? '#8a968f' : P.silk};font-size:9px"`);
+    s += T(x + 10, 233, 'A' + (i + 1), 'mid', 'style="font-size:7.5px;fill:#0a0d0e;font-weight:700"');
+  });
+  bot.forEach((n, i) => {
+    const g = grp(n), x = x0 + i * pitch, c = col[g];
+    s += g === 'ss' ? `<rect x="${x}" y="238" width="20" height="30" rx="2" fill="${P.io}"/><rect x="${x + 10}" y="238" width="10" height="30" rx="2" fill="${DPC}"/>` : `<rect x="${x}" y="238" width="20" height="30" rx="2" fill="${c}"/>`;
+    s += T(x + 10, 288, n, 'mid ts', `style="fill:${g === 'gnd' ? '#8a968f' : P.silk};font-size:9px"`);
+    s += T(x + 10, 264, 'B' + (12 - i), 'mid', 'style="font-size:7.5px;fill:#0a0d0e;font-weight:700"');
+  });
+  // legend under connector
+  const lg = [[P.pwr, 'POWER · VBUS + CC (PD messages ride CC)'], [P.io, 'USB 2.0 · D+/D−'], [P.io, 'SUPERSPEED PAIRS — shared:', DPC], [DPC, 'SBU1/2 → DP AUX in Alt Mode'], ['#5d6a63', 'GROUND']];
+  lg.forEach(([c, l, c2], i) => { const y = 360 + i * 24; s += `<rect x="60" y="${y - 11}" width="20" height="14" rx="2" fill="${c}"/>` + (c2 ? `<rect x="70" y="${y - 11}" width="10" height="14" rx="2" fill="${c2}"/>` : '') + T(92, y, l, 'ts') + (c2 ? T(300, y, 'USB 3 or DisplayPort, set by the mux', 'ts c-dim') : ''); });
+  s += T(60, 500, 'Plug is reversible: CC tells the controller which way round it is,', 'ts c-dim') + T(60, 516, 'then the mux maps TX1/RX1 or TX2/RX2 to the right destination.', 'ts c-dim');
+  // bundles to the right
+  s += `<path d="M540,200 C600,200 590,128 660,128" class="tr" stroke="${P.pwr}" stroke-width="10" stroke-opacity=".85" filter="url(#glow)"/>`;
+  s += `<path d="M540,230 C600,230 600,290 660,290" class="tr" stroke="${P.io}" stroke-width="10" stroke-opacity=".85" filter="url(#glow)"/>`;
+  s += `<path d="M540,260 C600,260 590,452 660,452" class="tr" stroke="${DPC}" stroke-width="10" stroke-opacity=".85" filter="url(#glow)"/>`;
+  s += block(660, 70, 380, 120, { role: 'pwr', title: 'POWER', left: true, lines: ['VBUS · 5 / 9 / 15 / 20 V', 'CC1 / CC2 · attach + orientation', 'USB Power Delivery contract'] });
+  s += block(660, 232, 380, 120, { role: 'io', title: 'USB DATA', left: true, lines: ['D+ / D− · USB 2.0', 'SuperSpeed TX / RX pairs · USB 3', 'Dock hub → USB ports + Ethernet'] });
+  s += block(660, 394, 380, 120, { role: DPC, title: 'DISPLAYPORT', left: true, lines: ['High-speed lanes (2 or 4, via mux)', 'SBU1 / SBU2 → DP AUX channel', 'DisplayPort Alt Mode'] });
+  s += T(1110, 58, 'INCIDENT', 'mid ts tw c-dim');
+  s += bigMark(1088, 108, true) + T(1110, 172, 'WORKING', 'mid ts tw c-pwr');
+  s += bigMark(1088, 270, false) + T(1110, 334, 'MISSING', 'mid ts tw c-fail');
+  s += bigMark(1088, 432, false) + T(1110, 496, 'MISSING', 'mid ts tw c-fail');
+  s += `<rect x="660" y="540" width="500" height="54" rx="6" fill="rgba(255,79,79,.08)" stroke="${P.fail}" stroke-opacity=".6"/>`;
+  s += T(680, 562, 'Charging proves VBUS + CC + PD are healthy.', 'ts tw') + T(680, 580, 'It proves nothing about the data and display paths.', 'ts c-dim');
+  return svgWrap(1200, 620, s, 'USB-C connector cutaway: power works, USB data and DisplayPort missing');
+}
+
+/* ================= FIG 03 — HP USB-C Dock G5 cutaway ================= */
+function fig03() {
+  let s = '';
+  s += TH(40, 48, 'HP USB-C DOCK G5 · FUNCTIONAL CUTAWAY', 'txl');
+  s += T(40, 70, 'Solid = publicly documented by HP · Dashed = representative function block (chip not publicly confirmed)', 'ts c-dim');
+  // laptop stub + cable
+  s += `<rect x="30" y="300" width="150" height="96" rx="8" fill="#151b18" stroke="#3a4a42"/><rect x="40" y="310" width="130" height="62" rx="4" fill="#07090a"/>` + T(105, 412, 'HOST LAPTOP', 'mid ts tw');
+  s += T(105, 428, 'USB-C · PD + DP Alt Mode', 'mid ts c-dim');
+  s += `<path d="M180,348 C240,348 250,348 330,348" stroke="#26302b" stroke-width="18" fill="none" stroke-linecap="round"/>`;
+  s += `<path d="M180,342 H330" class="tr" stroke="${P.pwr}" stroke-width="3" filter="url(#glow)"/><path d="M180,348 H330" class="tr" stroke="${P.io}" stroke-width="3"/><path d="M180,354 H330" class="tr" stroke="${DPC}" stroke-width="3"/>`;
+  s += T(255, 334, 'captive USB-C cable', 'mid ts c-dim');
+  // dock shell
+  s += `<rect x="330" y="96" width="560" height="560" rx="70" fill="#0f1412" stroke="#46524c" stroke-width="3"/>`;
+  s += `<rect x="352" y="118" width="516" height="516" rx="54" fill="url(#pcbTex)" stroke="${P.maskLine}" stroke-width="1.5"/>`;
+  s += T(610, 650, '≈ 12.2 × 12.2 cm footprint (HP datasheet)', 'mid ts c-mute');
+  // blocks
+  s += block(372, 300, 150, 96, { role: 'pwr', title: 'PD CONTROLLER', lines: ['CC · PD · Alt Mode', '≤ 100 W to host'], chip: 'HP FW', fs: 15 });
+  s += block(372, 140, 150, 96, { role: P.ink, title: 'DOCK MGMT', lines: ['controller (DMC)', 'firmware updates'], chip: 'HP FW', fs: 15 });
+  s += block(372, 470, 150, 110, { role: 'pwr', title: 'POWER STAGE', lines: ['from dock AC adapter', '5·9·10·12·15·20 V', '≤ 5 A to host'], chip: 'HP SPEC', fs: 15 });
+  s += block(552, 300, 110, 96, { role: P.ink2, title: 'LANE SPLIT', lines: ['dock-side mux', 'USB 3 ↔ DP'], dash: true, fs: 14 });
+  s += block(692, 130, 160, 92, { role: 'io', title: 'USB 3 HUB', lines: ['USB 2 + USB 3', 'audio codec on hub'], dash: true, fs: 15 });
+  s += block(692, 262, 160, 44, { role: 'io', title: 'GbE NIC · USB', dash: true, fs: 14 });
+  s += block(700, 400, 150, 110, { role: DPC, title: 'GRAPHIC CTRL', lines: ['“Docking Graphic', 'Controller” · DP', 'MST-style split'], chip: 'HP FW', fs: 15 });
+  // internal wiring
+  s += arrow('M330,342 H372', 'pwr', 3);
+  s += arrow('M522,348 H552', 'io', 3);
+  s += arrow('M662,330 C682,330 672,176 690,176', 'io', 3) + arrow('M662,368 C684,368 676,455 698,455', DPC, 3);
+  s += arrow('M772,222 V260', 'io', 2);
+  s += arrow('M447,300 V236', P.ink2, 1.5, 'stroke-dasharray="4 4"') + T(456, 272, 'I²C / mgmt', 'ts c-mute');
+  s += arrow('M447,470 V396', 'pwr', 3);
+  // ports
+  const port = (x, y, w, h, label, role) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="#0a0d0c" stroke="${ROLE[role] || role}" stroke-width="1.6"/>` + T(x + w + 8, y + h / 2 + 4, label, 'ts tw');
+  s += port(900, 130, 24, 14, '2× USB-A 3.0 (back)', 'io') + port(900, 168, 24, 14, '2× USB-A 3.0 (side)', 'io') + port(900, 206, 20, 12, 'USB-C front · data + 15 W', 'io');
+  s += port(900, 243, 24, 12, 'Audio combo jack', 'io') + port(900, 273, 24, 18, 'RJ45 · 10/100/1000', 'io');
+  s += port(900, 404, 24, 14, 'DisplayPort 1.4 · ×2', DPC) + port(900, 452, 26, 12, 'HDMI 2.0', DPC);
+  s += port(900, 560, 24, 20, 'Power in (dock adapter)', 'pwr');
+  s += arrow('M852,145 C872,145 878,137 896,137', 'io', 2) + arrow('M852,168 C872,168 878,175 896,175', 'io', 2) + arrow('M852,190 C872,190 878,212 896,212', 'io', 2) + arrow('M852,208 C872,208 878,249 896,249', 'io', 2) + arrow('M852,282 H896', 'io', 2);
+  s += arrow('M850,430 H896', DPC, 2.5) + arrow('M850,470 C870,470 875,458 896,458', DPC, 2.5) + arrow('M896,570 C700,610 600,560 522,540', 'pwr', 2.5);
+  // notes
+  s += `<rect x="30" y="470" width="280" height="150" rx="6" fill="#0b1712" stroke="${P.line}"/>`;
+  s += TL(44, 494, 'NOT THUNDERBOLT\nHP: Thunderbolt laptops “function at\nUSB-C speeds”. No PCIe tunnelling.\nHost needs PD + DP Alt Mode.\nTechnical notes: 2 external displays\n+ host panel (all three outputs usable).', 17, 'ts', 'style="fill:#cfdcd2"');
+  s += `<g transform="translate(30,90)"><rect width="280" height="120" rx="6" fill="#0b1712" stroke="${P.line}"/>` + TL(14, 24, 'HP FIRMWARE PACKAGE LISTS\n• Dock Management Controller\n• Power Delivery Controller\n• Docking Graphic Controller\n(SoftPaq release notes)', 18, 'ts', 'style="fill:#cfdcd2"') + `</g>`;
+  return svgWrap(1200, 680, s, 'HP USB-C Dock G5 functional cutaway');
+}
+
+/* ================= FIG 04/05 — sequences ================= */
+const SEQ = [
+  ['CABLE INSERTED', 'plug mates · orientation unknown', 'ink'],
+  ['CC ATTACH', 'Rp/Rd seen on CC1 or CC2 → flip known', 'pwr'],
+  ['PD NEGOTIATION', 'Source_Caps → Request → Accept → PS_RDY', 'pwr'],
+  ['VBUS ESTABLISHED', 'contract voltage, e.g. 20 V', 'pwr'],
+  ['CHARGING', 'charger takes VBUS → VSYS + battery', 'pwr'],
+  ['DP ALT MODE', 'Discover ID/SVIDs/Modes → Enter Mode', 'io'],
+  ['MUX ROUTES LANES', 'pin assignment C or D · orientation', 'io'],
+  ['USB HUB ENUMERATES', 'dock hub, NIC, audio, ports', 'io'],
+  ['DP LINK TRAINS', 'AUX over SBU · clock recovery · EQ', DPC],
+  ['WINDOWS ENUMERATES', 'PnP: displays, Ethernet, USB devices', 'main']
+];
+function seqNodes(state) { // state[i] in 'ok' | 'fail' | 'off' | 'warn'
+  let s = '';
+  const pos = i => i < 5 ? [150 + i * 225, 150] : [150 + (9 - i) * 225, 330];
+  // snake path
+  s += `<path d="M150,150 H1050 C1130,150 1130,330 1050,330 H150" fill="none" stroke="#1d3428" stroke-width="10" stroke-linecap="round"/>`;
+  for (let i = 0; i < 9; i++) {
+    const [x1, y1] = pos(i), [x2, y2] = pos(i + 1);
+    const c = state[i + 1] === 'ok' ? (ROLE[SEQ[i + 1][2]] || SEQ[i + 1][2]) : state[i + 1] === 'fail' ? P.fail : P.off;
+    const d = i === 4 ? `M${x1},${y1} C1130,150 1130,330 ${x2},${y2}` : `M${x1},${y1} L${x2},${y2}`;
+    s += `<path d="${d}" class="tr seq-link" data-step="${i + 1}" stroke="${c}" stroke-width="3" ${state[i + 1] === 'ok' ? 'filter="url(#glow)"' : ''} ${state[i + 1] !== 'ok' ? 'stroke-dasharray="7 6"' : ''}/>`;
+  }
+  SEQ.forEach(([t, d, role], i) => {
+    const [x, y] = pos(i); const st = state[i];
+    const c = st === 'ok' ? (ROLE[role] || role) : st === 'fail' ? P.fail : st === 'warn' ? P.warn : P.off;
+    s += `<g class="seq-node" data-step="${i}">`;
+    s += `<circle cx="${x}" cy="${y}" r="27" fill="${P.bg}" stroke="${c}" stroke-width="3" ${st !== 'off' ? 'filter="url(#glow)"' : ''}/>`;
+    s += TH(x, y + 8, String(i + 1), 'mid tl', `style="fill:${c};font-size:22px"`);
+    s += TH(x, y + (i < 5 ? -44 : 52), t, 'mid', `style="font-size:15px;fill:${st === 'off' ? '#7f8f86' : P.silk}"`);
+    s += T(x, y + (i < 5 ? -28 : 68), d, 'mid', 'style="font-size:9px;fill:#97ad9f"');
+    if (st === 'fail' || st === 'warn') s += icon(st === 'fail' ? 'i-x' : 'i-warn', x + 14, y - 34, 22, st === 'fail' ? P.fail : P.warn);
+    s += `</g>`;
+  });
+  return s;
+}
+function fig04() {
+  let s = TH(40, 50, 'NORMAL USB-C DOCK BRING-UP', 'txl') + T(40, 72, 'Representative order · USB 2.0 can enumerate as soon as VBUS is up; DP and USB 3 wait for Alt Mode', 'ts c-dim');
+  s += `<g transform="translate(0,40)">${seqNodes(Array(10).fill('ok'))}</g>`;
+  const band = (x, w, c, l) => `<rect x="${x}" y="470" width="${w}" height="6" rx="3" fill="${c}"/>` + T(x, 496, l, 'ts tw', `style="fill:${c}"`);
+  s += band(40, 330, P.pwr, 'POWER DOMAIN · stages 1–5') + band(400, 380, P.io, 'DATA / ALT MODE · 6–8') + band(810, 160, DPC, 'DISPLAY · 9') + band(1000, 160, P.main, 'OS · 10');
+  s += statusPill(330, 520, 'pwr', true, 'CHARGING', 170) + statusPill(515, 520, 'usb', true, 'USB', 150) + statusPill(680, 520, 'dp', true, 'DISPLAY', 170);
+  return svgWrap(1200, 580, s, 'Normal USB-C dock bring-up sequence, ten stages', 'seq');
+}
+function fig05() {
+  let s = TH(40, 50, 'WHERE THE CHAIN BROKE', 'txl') + T(40, 72, 'Power contract completed (charging proves it). The dock never appeared in Device Manager, so the break sits before ANY USB enumeration — USB 2.0 included.', 'ts c-dim');
+  const nodeBox = (x, y, w, title, ok, role, fs = 21) => {
+    const c = ok === true ? (ROLE[role] || role) : ok === 'warn' ? P.warn : ok === 'off' ? P.off : P.fail;
+    return `<rect x="${x}" y="${y}" width="${w}" height="64" rx="10" fill="${ok === 'warn' ? 'url(#hatchRed)' : P.bg}" stroke="${c}" stroke-width="2.5" ${ok === 'warn' ? 'class="pulse"' : ''} ${ok === 'off' ? 'stroke-dasharray="6 5"' : 'filter="url(#glow)"'}/>` +
+      `<rect x="${x}" y="${y}" width="${w}" height="64" rx="10" fill="${P.bg}" opacity="${ok === 'warn' ? .55 : 0}"/>` +
+      TH(x + 22, y + 41, title, '', `style="font-size:${fs}px;fill:${ok === 'off' ? '#7f8f86' : P.silk}"`) + bigMark(x + w - 50, y + 12, ok, 40);
+  };
+  s += nodeBox(80, 110, 380, 'CC ATTACH', true, 'pwr');
+  s += arrow('M270,174 V214', 'pwr', 3);
+  s += nodeBox(80, 218, 380, 'PD NEGOTIATION', true, 'pwr');
+  s += arrow('M460,250 H640', 'pwr', 4, 'filter="url(#glow)"');
+  s += `<rect x="650" y="214" width="320" height="72" rx="36" fill="${P.bg}" stroke="${P.pwr}" stroke-width="2.5" filter="url(#glow)"/>` + icon('i-bolt', 674, 232, 36, P.pwr) + TH(722, 262, 'CHARGING', '', 'style="font-size:22px"') + bigMark(910, 228, true, 44);
+  s += arrow('M270,282 V330', P.warn, 3);
+  s += nodeBox(80, 334, 560, 'USB CONNECTION / DATA-ROLE STATE', 'warn', 'pwr', 20);
+  s += TH(170, 432, 'STUCK', '', `style="font-size:30px;fill:${P.fail}" filter="url(#glow)"`) + T(270, 418, 'PD controller (via EC) never reports a USB connection,', 'ts c-dim') + T(270, 434, 'so the host never enables the port’s USB 2.0 or USB 3', 'ts c-dim');
+  // downstream: USB 2 path, Alt Mode path
+  s += arrow('M150,398 V454', 'fail', 2.5, 'stroke-dasharray="6 5"') + arrow('M620,398 V454', 'fail', 2.5, 'stroke-dasharray="6 5"');
+  s += nodeBox(80, 458, 380, 'USB 2.0 ENUMERATION', 'off', 'io', 18) + nodeBox(480, 458, 330, 'ALT MODE · MUX · DP', 'off', 'io', 18);
+  s += T(90, 540, 'needs no Alt Mode, no mux — still absent', 'ts c-fail') + T(490, 540, 'never reached', 'ts c-fail');
+  s += arrow('M300,522 C300,600 560,600 646,600', 'fail', 2.5) + arrow('M810,490 C840,490 850,600 860,610', 'fail', 2.5);
+  s += `<rect x="650" y="568" width="250" height="64" rx="32" fill="${P.bg}" stroke="${P.fail}" stroke-width="2.5"/>` + icon('i-usb', 670, 584, 32, P.ink) + TH(712, 610, 'USB · LAN', '', 'style="font-size:20px"') + bigMark(846, 580, false, 40);
+  s += `<rect x="910" y="568" width="250" height="64" rx="32" fill="${P.bg}" stroke="${P.fail}" stroke-width="2.5"/>` + icon('i-mon', 930, 584, 32, P.ink) + TH(972, 610, 'DISPLAYS', '', 'style="font-size:20px"') + bigMark(1106, 580, false, 40);
+  s += `<g transform="translate(1000,110)"><rect width="170" height="420" rx="8" fill="#0b1712" stroke="${P.line}"/>` + TL(14, 28, 'WHY THIS SHAPE\nMATTERS\n\nIf only Alt Mode\nhad failed, USB 2.0\nwould still work and\nthe dock would show\na Billboard device.\n\nNothing showed up,\nso the stuck state\nsits upstream of\nboth paths.', 17, 'ts', 'style="fill:#cfdcd2"') + `</g>`;
+  // evidence strip: Device Manager
+  const y0 = 670;
+  s += `<rect x="40" y="${y0}" width="1130" height="250" rx="10" fill="#08130e" stroke="${P.line}"/>` + T(60, y0 + 28, 'EVIDENCE · WINDOWS DEVICE MANAGER (View → Devices by connection)', 'ts tw c-aux');
+  const dm = (x, title, rows, ok) => {
+    let g = `<rect x="${x}" y="${y0 + 44}" width="520" height="186" rx="6" fill="#0f1513" stroke="${ok ? '#3a4a42' : P.fail}" stroke-width="1.5"/>` + `<rect x="${x}" y="${y0 + 44}" width="520" height="28" rx="6" fill="#16201b"/>` + T(x + 14, y0 + 63, title, 'ts tw', `style="fill:${ok ? P.ink : P.fail}"`);
+    rows.forEach(([ind, txt, c], i) => g += T(x + 20 + ind * 18, y0 + 96 + i * 22, (ind ? '└ ' : '▸ ') + txt, 'ts', `style="fill:${c || '#cfdcd2'}"`));
+    return g;
+  };
+  s += dm(60, 'IF ONLY ALT MODE / LANES HAD FAILED (expected)', [[0, 'USB xHCI controller → Type-C port'], [1, 'Generic USB hub (dock, USB 2.0 side)'], [2, 'USB Billboard device  ← “display connection may be limited”', P.aux], [2, 'Dock USB 2.0 devices (management, audio …)'], [0, 'USB Connector Managers → UCM-UCSI ACPI device'], [0, 'no DisplayPort monitors · no USB 3 hub', P.ink2]], true);
+  s += dm(630, 'OBSERVED IN THIS INCIDENT', [[0, 'USB xHCI controller → Type-C port'], [1, '(nothing attached — no hub, no Billboard,', P.fail], [1, ' no Ethernet, no audio, no dock device)', P.fail], [0, 'Charging indicator: ON', P.pwr], [0, '→ break is before USB 2.0 enumeration', P.aux]], false);
+  return svgWrap(1200, 940, s, 'Failure state: charging works, USB connection state stuck before any USB enumeration, dock absent from Device Manager');
+}
+
+/* ================= FIG 06 — warm vs hardware reset ================= */
+function fig06() {
+  let s = '';
+  const col = (x, title, sub, steps, res, scope) => {
+    let g = `<rect x="${x}" y="20" width="560" height="640" rx="10" fill="#0a1611" stroke="${P.line}"/>` + TH(x + 24, 60, title, 'txl') + T(x + 24, 82, sub, 'ts c-dim');
+    let y = 104;
+    steps.forEach(([t, role, note], i) => {
+      if (t === 'BUT') { g += TH(x + 280, y + 22, 'BUT', 'mid', `style="font-size:20px;fill:${P.warn}"`); y += 36; return; }
+      const c = ROLE[role] || role;
+      g += `<rect x="${x + 40}" y="${y}" width="300" height="34" rx="6" fill="${role === 'fail' ? 'url(#hatchRed)' : P.bg}" stroke="${c}" stroke-width="2" ${role !== 'off' ? 'filter="url(#glow)"' : ''}/>` + TH(x + 56, y + 23, t, '', 'style="font-size:15px"');
+      if (note) g += T(x + 352, y + 22, note, 'ts', `style="fill:${c}"`);
+      if (i < steps.length - 1 && steps[i + 1][0] !== 'BUT') g += arrow(`M${x + 190},${y + 34} V${y + 46}`, role === 'off' ? 'ink' : role, 2);
+      y += 48;
+    });
+    g += T(x + 40, y + 16, 'RESULT', 'ts tw c-dim');
+    g += statusPill(x + 40, y + 26, 'pwr', res[0], 'POWER', 150) + statusPill(x + 200, y + 26, 'usb', res[1], 'USB', 150) + statusPill(x + 360, y + 26, 'dp', res[2], 'DISPLAY', 160);
+    g += scope;
+    return g;
+  };
+  // mini scopes: rail feeding PD/mux
+  const scope = (x, drop) => {
+    let g = `<rect x="${x + 40}" y="566" width="480" height="78" rx="4" fill="#050b08" stroke="#1d3428"/>`;
+    for (let i = 1; i < 6; i++) g += `<path d="M${x + 40 + i * 80},566 V644" stroke="#11251a"/>`;
+    const y3 = 584, y0 = 636;
+    const d = drop ? `M${x + 44},${y3} H${x + 180} C${x + 210},${y3} ${x + 220},${y0} ${x + 270},${y0} H${x + 380} L${x + 400},${y3} H${x + 516}` : `M${x + 44},${y3} H${x + 516}`;
+    g += `<path d="${d}" class="tr" stroke="${P.aux}" stroke-width="2.4" filter="url(#glow)"/>`;
+    g += T(x + 50, 580, 'AUX rail feeding PD / mux logic', 'ts c-aux') + T(x + 514, 640, drop ? 'collapses → state lost' : 'never drops → state survives', 'end ts', `style="fill:${drop ? P.pwr : P.fail}"`);
+    return g;
+  };
+  s += col(20, 'WINDOWS RESTART', 'warm reset · OS-controlled', [
+    ['CPU → RESET', 'warn', 'core reset'], ['WINDOWS → RELOAD', 'main', 'drivers re-init'], ['BUT'],
+    ['AUX POWER RAIL → STILL ON', 'aux', 'never switched'], ['USB-C CONTROLLER → POWERED', 'aux', 'keeps its RAM'], ['STUCK STATE → SURVIVES', 'fail', 'same bad state']
+  ], [true, false, false], scope(20, false));
+  s += col(620, 'HARDWARE POWER-STATE RESET', 'long power-button hold · EC-controlled', [
+    ['EC / POWER SEQUENCER', 'aux', 'reads PWR_BTN#'], ['REGULATORS DISABLED', 'warn', 'EN pins low'], ['RELEVANT RAILS COLLAPSE', 'off', 'caps discharge'],
+    ['CONTROLLER LOSES STATE', 'off', 'volatile cleared'], ['COLD INITIALISATION', 'main', 'firmware reloads'], ['USB-C NEGOTIATES AGAIN', 'pwr', 'CC → PD → Alt Mode']
+  ], [true, true, true], scope(620, true));
+  return svgWrap(1200, 680, s, 'Windows restart versus hardware power-state reset');
+}
+
+/* ================= FIG 07 — power rail map ================= */
+function fig07() {
+  let s = TH(40, 46, 'POWER TREE · WHO FEEDS WHOM', 'txl') + T(40, 68, 'Representative voltages and rail names · counts, names and sequencing differ per platform', 'ts c-dim');
+  s += block(60, 96, 300, 86, { role: 'pwr', title: 'USB-C SOURCE (DOCK)', lines: ['PD fixed levels 5 / 9 / 15 / 20 V', 'HP G5 also lists 10 V, 12 V · ≤ 5 A'], glow: true });
+  s += block(450, 96, 300, 86, { role: 'pwr', title: 'USB-C PD CONTROLLER', lines: ['negotiates the contract', 'switches the VBUS sink path'] });
+  s += block(840, 96, 300, 86, { role: 'pwr', title: 'BATTERY PACK', lines: ['3S/4S Li-ion · ≈ 9–17 V', 'charged and discharged via charger'] });
+  s += arrow('M360,139 H446', 'pwr', 4, 'filter="url(#glow)"');
+  s += block(450, 228, 300, 76, { role: 'pwr', title: 'CHARGER / POWER PATH', lines: ['NVDC: VSYS ≈ battery voltage'] });
+  s += arrow('M600,182 V224', 'pwr', 4, 'filter="url(#glow)"') + `<path d="M840,139 H800 V266 H754" class="tr" stroke="${P.pwr}" stroke-width="4" marker-start="url(#ar-pwr)" marker-end="url(#ar-pwr)" filter="url(#glow)"/>` + T(808, 210, 'charge ⇄', 'ts c-pwr') + T(808, 224, 'discharge', 'ts c-pwr');
+  s += `<rect x="80" y="346" width="1040" height="18" rx="9" fill="${P.pwr}" opacity=".9" filter="url(#glow)"/>` + TH(600, 360, 'SYSTEM BUS · VSYS', 'mid', `style="font-size:14px;fill:${P.bg}"`);
+  s += arrow('M600,304 V344', 'pwr', 5);
+  const colm = (x, title, role, state, leaves) => {
+    const c = ROLE[role];
+    let g = arrow(`M${x + 160},364 V396`, role, 4) + `<rect x="${x}" y="398" width="320" height="56" rx="8" fill="${P.bg}" stroke="${c}" stroke-width="2.4" filter="url(#glow)"/>` + TH(x + 20, 434, title, '', `style="font-size:20px;fill:${c}"`) + tag(x + 320 - state.length * 6.4 - 24, 418, state, c);
+    leaves.forEach(([n, v], i) => {
+      const y = 486 + i * 52;
+      g += `<path d="M${x + 24},454 V${y + 18} H${x + 48}" class="tr" stroke="${c}" stroke-width="2.4"/>` + `<rect x="${x + 48}" y="${y}" width="272" height="36" rx="6" fill="#0c1b14" stroke="${c}" stroke-opacity=".7"/>` + T(x + 62, y + 23, n, 'tw') + T(x + 306, y + 23, v, 'end ts c-dim');
+    });
+    return g;
+  };
+  s += colm(60, 'AUX · ALWAYS-ON', 'aux', 'S0–S5', [['3.3V_AUX', 'standby LDO/buck'], ['1.8V_AUX', 'logic I/O'], ['EC', 'on 3.3V_AUX'], ['USB-C / PD logic', 'often here']]);
+  s += colm(440, 'MAIN · S0 RAILS', 'main', 'S0 only', [['5 V', 'USB / misc'], ['3.3 V', 'SSD, peripherals'], ['CPU VRM → VCORE', '≈ 0.6–1.4 V'], ['GPU rails', 'if dGPU fitted']]);
+  s += colm(820, 'I/O · USB-C PATH', 'io', 'S0 · varies', [['USB-C port power', 'laptop as source'], ['MUX', 'SS / DP routing'], ['RETIMER', 'HS signal conditioning']]);
+  s += `<rect x="60" y="702" width="1080" height="44" rx="6" fill="rgba(242,194,48,.07)" stroke="${P.aux}" stroke-opacity=".5"/>` + T(80, 729, 'Key point: a controller fed from the AUX column can keep running — and keep a bad state — while every MAIN rail is off.', 'ts', `style="fill:${P.aux}"`);
+  return svgWrap(1200, 760, s, 'Motherboard power tree: source, charger, system bus, AUX, MAIN and I/O rails');
+}
+
+/* ================= FIG 08 — off ≠ 0 V ================= */
+function fig08() {
+  let s = TH(600, 50, 'THE LAPTOP LOOKS OFF —', 'mid txl') + TH(600, 82, 'BUT PARTS OF THE BOARD MAY STILL BE POWERED', 'mid txl', `style="fill:${P.aux}"`);
+  // laptop
+  s += `<rect x="370" y="110" width="460" height="270" rx="14" fill="#141a17" stroke="#3a4842" stroke-width="2"/><rect x="386" y="126" width="428" height="236" rx="4" fill="#020403"/>`;
+  s += `<path d="M386,126 L520,126 L386,250Z" fill="#ffffff" opacity=".03"/>` + T(600, 252, 'SCREEN OFF', 'mid tm c-mute');
+  s += `<path d="M330,384 H870 L920,420 H280Z" fill="#1a211d" stroke="#3a4842" stroke-width="2"/><rect x="560" y="404" width="80" height="8" rx="4" fill="#0c100e"/>`;
+  // x-ray grid
+  const cells = [
+    ['CPU', 'OFF', 'off', '0 V'], ['GPU', 'OFF', 'off', '0 V'], ['MAIN RAILS', 'OFF', 'off', '5V · 3V3 → 0 V'],
+    ['BATTERY', 'LIVE', 'pwr', 'VBAT ≈ 12 V'], ['CHARGER IC', 'LIVE', 'pwr', 'VSYS present'], ['EC', 'POSSIBLY LIVE', 'aux', '3.3V_AUX'],
+    ['USB-C PD CONTROLLER', 'POSSIBLY LIVE', 'aux', 'AUX or VBUS'], ['WAKE LOGIC', 'LIVE', 'aux', 'lid · button · LAN'], ['RTC DOMAIN', 'LIVE', 'aux', 'clock + CMOS']
+  ];
+  s += `<path d="M320,420 L60,470 M880,420 L1140,470" stroke="#2c4a3a" stroke-dasharray="4 5"/>`;
+  s += `<rect x="40" y="470" width="1120" height="300" rx="10" fill="#08130e" stroke="#2c4a3a"/>` + T(56, 492, 'X-RAY · SHUTDOWN STATE (S5) WITH BATTERY PRESENT', 'ts tw c-dim');
+  cells.forEach(([n, st, role, v], i) => {
+    const x = 60 + (i % 3) * 366, y = 504 + Math.floor(i / 3) * 86, c = ROLE[role];
+    const maybe = st.startsWith('POSSIBLY');
+    s += `<rect x="${x}" y="${y}" width="350" height="74" rx="8" fill="${role === 'off' ? '#0b100e' : '#0c1b14'}" stroke="${c}" stroke-width="2" ${maybe ? 'stroke-dasharray="7 5"' : ''} ${role !== 'off' ? 'filter="url(#glow)"' : ''}/>`;
+    s += `<circle cx="${x + 26}" cy="${y + 37}" r="9" fill="${role === 'off' ? '#26302b' : c}" ${role !== 'off' ? 'filter="url(#glow)"' : ''} ${maybe ? 'class="pulse"' : ''}/>`;
+    s += TH(x + 46, y + 32, n, '', `style="font-size:17px;fill:${role === 'off' ? '#7f8f86' : P.silk}"`) + T(x + 46, y + 54, v, 'ts c-dim');
+    s += T(x + 336, y + 32, st, 'end ts tw', `style="fill:${role === 'off' ? '#7f8f86' : c}"`);
+  });
+  return svgWrap(1200, 790, s, 'Laptop looks off but parts of the board may still be powered');
+}
+
+/* ================= FIG 09 — power button path ================= */
+function fig09() {
+  let s = '';
+  // WRONG
+  s += `<rect x="20" y="20" width="480" height="560" rx="10" fill="#140b0b" stroke="#4a2020"/>` + TH(44, 62, 'MYTH', 'txl', `style="fill:${P.fail}"`) + T(44, 86, '“The button drains electricity”', 'tm c-dim');
+  s += `<g transform="translate(150,130)" opacity=".85">` +
+    `<path d="M100,0 V40" stroke="${P.ink}" stroke-width="3"/>` + `<path d="M60,40 H140 M78,54 H122 M60,68 H140 M78,82 H122" stroke="${P.ink}" stroke-width="4"/>` + T(160, 66, 'BATTERY', 'ts tw') +
+    `<path d="M100,82 V150" stroke="${P.ink}" stroke-width="3"/><circle cx="100" cy="154" r="5" fill="${P.ink}"/><path d="M100,158 L140,200" stroke="${P.ink}" stroke-width="3"/><circle cx="100" cy="214" r="5" fill="${P.ink}"/>` + T(150, 186, 'POWER BUTTON', 'ts tw') +
+    `<path d="M100,218 V290 M66,290 H134 M78,302 H122 M90,314 H110" stroke="${P.ink}" stroke-width="3"/>` + T(150, 300, 'GROUND', 'ts tw') + `</g>`;
+  s += `<path d="M90,150 L430,500 M430,150 L90,500" stroke="${P.fail}" stroke-width="18" stroke-linecap="round" opacity=".9" filter="url(#glow)"/>`;
+  s += T(260, 556, 'No such path exists on a modern laptop.', 'mid ts c-dim');
+  // CORRECT
+  s += `<rect x="520" y="20" width="660" height="560" rx="10" fill="#0a1611" stroke="${P.line}"/>` + TH(544, 62, 'REALITY', 'txl', `style="fill:${P.pwr}"`) + T(544, 86, 'The button is a logic input to the EC', 'tm c-dim');
+  const chain = [['POWER BUTTON', 'ink'], ['PWR_BTN# · logic level', 'sig'], ['EMBEDDED CONTROLLER', 'aux'], ['POWER SEQUENCER', 'aux'], ['PMIC / REGULATORS', 'main'], ['POWER RAILS', 'main']];
+  chain.forEach(([t, r], i) => {
+    const y = 114 + i * 74, c = ROLE[r];
+    s += `<rect x="560" y="${y}" width="290" height="46" rx="8" fill="${P.bg}" stroke="${c}" stroke-width="2" ${i === 1 ? 'stroke-dasharray="6 4"' : ''} filter="url(#glow)"/>` + TH(705, y + 30, t, 'mid', 'style="font-size:16px"');
+    if (i < chain.length - 1) s += arrow(`M705,${y + 46} V${y + 72}`, i === 0 ? 'sig' : r, 2.4);
+  });
+  // inset schematic
+  s += `<g transform="translate(880,110)"><rect width="280" height="300" rx="8" fill="#07110c" stroke="#1d3428"/>` + T(14, 22, 'WHAT THE BUTTON REALLY DOES', 'ts tw c-dim');
+  s += `<path d="M60,44 V64" stroke="${P.aux}" stroke-width="2.4"/>` + T(72, 50, '3.3V_AUX', 'ts c-aux');
+  s += `<path d="M60,64 l-8,5 16,8 -16,8 16,8 -16,8 16,8 -8,5 V140" fill="none" stroke="${P.ink}" stroke-width="2"/>` + T(80, 100, 'pull-up, e.g. 100 kΩ', 'ts');
+  s += `<path d="M60,140 H170" stroke="${P.ink}" stroke-width="2" stroke-dasharray="5 4"/><circle cx="60" cy="140" r="3.5" fill="${P.ink}"/>` + T(180, 144, '→ EC pin', 'ts') + T(80, 132, 'PWR_BTN#', 'ts tw');
+  s += `<path d="M60,140 V176" stroke="${P.ink}" stroke-width="2"/><circle cx="60" cy="180" r="4" fill="${P.ink}"/><path d="M60,184 L88,206" stroke="${P.ink}" stroke-width="2.4"/><circle cx="60" cy="214" r="4" fill="${P.ink}"/>` + T(96, 204, 'button', 'ts');
+  s += `<path d="M60,218 V240 M40,240 H80 M48,248 H72 M56,256 H64" stroke="${P.ink}" stroke-width="2"/>`;
+  s += T(14, 282, 'I = 3.3 V ÷ 100 kΩ ≈ 33 µA', 'ts tw c-pwr') + T(14, 296, 'example values · a signal, not a drain', 'ts c-dim') + `</g>`;
+  // waveform
+  s += `<g transform="translate(880,424)"><rect width="280" height="130" rx="8" fill="#07110c" stroke="#1d3428"/>` + T(14, 20, 'PWR_BTN# AS THE EC SEES IT', 'ts tw c-dim');
+  s += `<path d="M14,50 H70 V98 H230 V50 H266" class="tr" stroke="${P.aux}" stroke-width="2.4" filter="url(#glow)"/>` + T(20, 44, '3.3 V', 'ts c-dim') + T(76, 114, 'held → EC counts time', 'ts') + `<path d="M74,86 H226" stroke="${P.ink2}" marker-start="url(#ar-ink)" marker-end="url(#ar-ink)"/>` + `</g>`;
+  s += T(850, 600, 'The power button is normally a logic input, not the electrical discharge path.', 'mid tm tw');
+  return svgWrap(1200, 620, s, 'Power button myth versus reality');
+}
+
+/* ===== figs-b.js ===== */
+/* figs-b.js — FIG 10–15 */
+
+/* ================= FIG 10 — voltage decay ================= */
+const DECAY = { x0: 120, x1: 1060, y0: 470, y1: 80, tMin: -1, tMax: 6, vMax: 3.6, V0: 3.3 };
+const dx = t => DECAY.x0 + (t - DECAY.tMin) / (DECAY.tMax - DECAY.tMin) * (DECAY.x1 - DECAY.x0);
+const dy = v => DECAY.y0 - v / DECAY.vMax * (DECAY.y0 - DECAY.y1);
+const TAU_PRESETS = [
+  ['1 ms', 0.001, '10 µF into a 100 Ω load'],
+  ['10 ms', 0.01, '100 µF into a 100 Ω load'],
+  ['100 ms', 0.1, '100 µF into a 1 kΩ load'],
+  ['1 s', 1, '10 µF into a 100 kΩ bleeder'],
+  ['10 s', 10, '10 µF, only a 1 MΩ bleeder']
+];
+function fmtTime(sec) { return sec < 1 ? (sec * 1000).toPrecision(3).replace(/\.0+$/, '') + ' ms' : sec.toPrecision(3).replace(/\.0+$/, '') + ' s'; }
+function fig10(vth = 1.2, tauIdx = 1, compact = false) {
+  const V0 = DECAY.V0, td = Math.log(V0 / vth);
+  let s = '';
+  if (!compact) s += TH(40, 44, 'RAIL VOLTAGE AFTER THE REGULATOR SWITCHES OFF', 'txl') + T(40, 64, 'V(t) = V₀ · e^(−t / RC)   ·   time shown in multiples of τ = RC   ·   threshold is illustrative', 'ts c-dim');
+  // grid
+  for (let v = 0; v <= 3.5; v += 0.5) s += `<path d="M${DECAY.x0},${dy(v)} H${DECAY.x1}" stroke="#13281d" stroke-width="1"/>` + T(DECAY.x0 - 10, dy(v) + 4, v.toFixed(1) + ' V', 'end ts c-mute');
+  for (let t = -1; t <= 6; t++) s += `<path d="M${dx(t)},${DECAY.y1} V${DECAY.y0}" stroke="#13281d" stroke-width="1"/>` + T(dx(t), DECAY.y0 + 20, t === 0 ? '0' : t + 'τ', 'mid ts c-mute');
+  s += T(DECAY.x1, DECAY.y0 + 40, 'TIME →', 'end ts tw c-dim') + `<text x="40" y="${(DECAY.y0 + DECAY.y1) / 2}" class="t ts tw c-dim" transform="rotate(-90 40 ${(DECAY.y0 + DECAY.y1) / 2})" text-anchor="middle">RAIL VOLTAGE</text>`;
+  // lost-state region
+  s += `<rect x="${dx(td)}" y="${DECAY.y1}" width="${DECAY.x1 - dx(td)}" height="${DECAY.y0 - DECAY.y1}" fill="url(#hatchGray)" opacity=".55"/>`;
+  s += `<rect x="${dx(0)}" y="${DECAY.y1}" width="${dx(td) - dx(0)}" height="${DECAY.y0 - DECAY.y1}" fill="rgba(242,194,48,.05)"/>`;
+  // threshold
+  s += `<path d="M${DECAY.x0},${dy(vth)} H${DECAY.x1}" stroke="${P.fail}" stroke-width="1.6" stroke-dasharray="8 6"/>` + T(DECAY.x1 - 4, dy(vth) - 8, `CONTROLLER RETENTION THRESHOLD · ${vth.toFixed(2)} V`, 'end ts tw c-fail');
+  // curve
+  let d = `M${dx(-1)},${dy(V0)} H${dx(0)}`;
+  for (let t = 0; t <= 6.001; t += 0.05) d += ` L${dx(t).toFixed(1)},${dy(V0 * Math.exp(-t)).toFixed(1)}`;
+  s += `<path d="${d}" class="tr" stroke="${P.aux}" stroke-width="3" filter="url(#glow)"/>`;
+  s += `<circle cx="${dx(td)}" cy="${dy(vth)}" r="6" fill="${P.fail}" stroke="${P.bg}" stroke-width="2"/>`;
+  // letter callouts
+  const pts = [
+    ['A', 0, V0, 'regulator disabled', -12, -16],
+    ['B', 0.25, V0 * Math.exp(-0.25), 'rail begins decaying', 12, -12],
+    ['C', td * 0.45, V0 * Math.exp(-td * 0.45), 'controller still retains state', 14, -14],
+    ['D', td, vth, 'retention threshold crossed', 14, -14],
+    ['E', td + 0.9, V0 * Math.exp(-td - 0.9), 'volatile state no longer guaranteed', 14, -18],
+    ['F', 5.2, V0 * Math.exp(-5.2), 'rail settles near 0 V', -8, -22]
+  ];
+  pts.forEach(([L, t, v, label, ox, oy]) => {
+    const x = dx(t), y = dy(v);
+    s += `<circle cx="${x}" cy="${y}" r="12" fill="${P.bg}" stroke="${L === 'D' ? P.fail : P.ink}" stroke-width="1.6"/>` + T(x, y + 4, L, 'mid tw ts');
+    if (!compact) s += T(x + ox + (ox < 0 ? -2 : 4), y + oy, label, `${ox < 0 ? 'end' : ''} ts`, 'style="fill:#cfdcd2"');
+  });
+  // phase labels
+  s += T((dx(0) + dx(td)) / 2, DECAY.y1 + 18, 'STATE RETAINED', 'mid ts tw c-aux') + T((dx(td) + DECAY.x1) / 2, DECAY.y1 + 18, 'STATE LOST', 'mid ts tw c-off');
+  if (!compact) {
+    const [lab, tau, ex] = TAU_PRESETS[tauIdx];
+    const tD = td * tau, t5 = 5 * tau;
+    s += `<rect x="${DECAY.x0}" y="510" width="${DECAY.x1 - DECAY.x0}" height="58" rx="6" fill="#0a1611" stroke="${P.line}"/>`;
+    s += T(DECAY.x0 + 16, 534, `τ = ${lab}  (${ex})`, 'tw') + T(DECAY.x0 + 16, 554, `D at τ·ln(V₀/Vth) = ${td.toFixed(2)}τ = ${fmtTime(tD)}   ·   ≈ 0 V (5τ) at ${fmtTime(t5)}`, 'ts c-dim');
+    const ok = t5 < 45;
+    s += T(DECAY.x1 - 16, 544, ok ? `45 s hold covers this ${t5 < 4 ? 'easily' : 'with margin'}` : '45 s would NOT fully clear this rail', 'end tw', `style="fill:${ok ? P.pwr : P.warn}"`);
+    // crosshair placeholders
+    s += `<g class="xhair" style="display:none"><path d="M0,${DECAY.y1} V${DECAY.y0}" stroke="${P.ink2}" stroke-dasharray="3 3"/><circle r="5" fill="${P.aux}" stroke="${P.bg}" stroke-width="2"/><rect class="xh-bg" x="8" y="-30" width="128" height="40" rx="4" fill="${P.bg}" stroke="${P.line}"/><text class="t ts xh-t" x="16" y="-14"></text><text class="t ts xh-v c-aux" x="16" y="2"></text></g>`;
+    s += `<rect class="xh-hit" x="${DECAY.x0}" y="${DECAY.y1}" width="${DECAY.x1 - DECAY.x0}" height="${DECAY.y0 - DECAY.y1}" fill="transparent"/>`;
+  }
+  return svgWrap(1200, compact ? 500 : 580, s, 'Rail voltage decay after regulator is disabled, with retention threshold');
+}
+
+/* ================= FIG 11 — what discharges the rail ================= */
+function fig11(on = false) {
+  const c = on ? P.main : P.aux;
+  let s = TH(40, 44, 'WHAT ACTUALLY DISCHARGES THE RAIL', 'txl') + T(40, 64, on ? 'Regulator ON: it supplies the rail, charges the capacitor and feeds the controller.' : 'Regulator OFF: the capacitor’s stored charge drains through the load and the bleeder — to GND.', 'ts c-dim');
+  // regulator
+  s += `<rect x="60" y="120" width="190" height="120" rx="8" fill="#0c1b14" stroke="${on ? P.main : P.off}" stroke-width="2"/>` + TH(155, 156, 'REGULATOR', 'mid', 'style="font-size:17px"') + T(155, 176, on ? 'EN = HIGH · switching' : 'EN = LOW · output off', 'mid ts', `style="fill:${on ? P.main : P.ink2}"`);
+  s += `<path d="M190,206 H214" stroke="${P.ink}" stroke-width="2"/><path d="M214,206 L236,${on ? 206 : 192}" stroke="${on ? P.main : P.fail}" stroke-width="3" stroke-linecap="round"/><circle cx="214" cy="206" r="3" fill="${P.ink}"/><circle cx="240" cy="206" r="3" fill="${P.ink}"/>`;
+  s += T(120, 210, 'VSYS in', 'ts c-dim');
+  // EN from EC
+  s += `<path d="M155,120 V96 H330" class="tr" stroke="${P.sig || '#c9d6cc'}" stroke-width="1.5" stroke-dasharray="5 4"/>` + T(340, 100, 'EN ← EC / power sequencer', 'ts');
+  // rail
+  s += `<path d="M250,206 H1000" class="tr" stroke="${c}" stroke-width="6" ${!on ? '' : ''} filter="url(#glow)"/>` + tag(820, 196, on ? 'RAIL · 3.3 V' : 'RAIL · decaying', c);
+  // branches
+  const br = [[420, 'CONTROLLER', 'normal circuit load'], [640, 'CAPACITOR', 'bulk + decoupling'], [860, 'BLEEDER', 'resistor / active-discharge FET']];
+  br.forEach(([x, n, sub], i) => {
+    s += `<path d="M${x},206 V280" stroke="${c}" stroke-width="3"/><circle cx="${x}" cy="206" r="5" fill="${c}"/>`;
+    if (i === 0) s += `<rect x="${x - 70}" y="280" width="140" height="70" rx="6" fill="#0c1b14" stroke="${P.io}" stroke-width="2"/>` + TH(x, 312, 'PD / MUX', 'mid', 'style="font-size:16px"') + T(x, 332, 'controller', 'mid ts c-dim');
+    if (i === 1) s += `<path d="M${x - 40},300 H${x + 40} M${x - 40},316 H${x + 40}" stroke="${P.ink}" stroke-width="4"/><path d="M${x},280 V300 M${x},316 V350" stroke="${c}" stroke-width="3"/>` + T(x + 52, 314, 'C', 'tw');
+    if (i === 2) s += `<path d="M${x},280 l-12,7 24,12 -24,12 24,12 -24,12 12,7 V350" fill="none" stroke="${P.ink}" stroke-width="2.4"/>` + T(x + 24, 318, 'R', 'tw');
+    s += `<path d="M${x},350 V420" stroke="${on ? P.off : P.aux}" stroke-width="3"/>` + T(x, 378 + 66, n, 'mid tw ts') + T(x, 458, sub, 'mid ts c-dim');
+    if (!on) s += `<path d="M${x + (i === 0 ? 86 : 22)},${i === 1 ? 250 : 236} V400" class="tr flow" stroke="${P.aux}" stroke-width="2.5" marker-end="url(#ar-aux)"/>`;
+  });
+  s += `<path d="M300,420 H900" stroke="${P.ink}" stroke-width="4"/><path d="M300,420 V436 M280,436 H320 M288,446 H312 M296,456 H304" stroke="${P.ink}" stroke-width="3"/>` + T(250, 440, 'GND', 'tw end');
+  if (on) s += `<path d="M260,224 H940" class="tr flow" stroke="${P.main}" stroke-width="2" marker-end="url(#ar-main)"/>`;
+  // power button separately
+  s += `<g transform="translate(980,250)"><rect width="200" height="200" rx="10" fill="#140b0b" stroke="${P.fail}" stroke-opacity=".7"/>` + icon('i-btn', 78, 24, 44, P.ink) + T(100, 92, 'POWER BUTTON', 'mid ts tw') + T(100, 112, '→ PWR_BTN# → EC only', 'mid ts c-dim');
+  s += TH(100, 160, 'POWER BUTTON', 'mid', 'style="font-size:15px"') + TH(100, 186, '≠ DISCHARGE PATH', 'mid', `style="font-size:17px;fill:${P.fail}"`) + `</g>`;
+  s += `<path d="M1000,212 C1060,212 1080,230 1080,248" stroke="${P.fail}" stroke-width="2" stroke-dasharray="4 4"/><path d="M1068,226 l22,14 M1090,226 l-22,14" stroke="${P.fail}" stroke-width="3"/>`;
+  return svgWrap(1200, 480, s, 'Circuit: regulator, rail, controller, capacitor, bleeder; power button is not the discharge path');
+}
+
+/* ================= FIG 12 — volatile vs non-volatile ================= */
+function fig12(collapsed = true) {
+  const L = ['SRAM', 'volatile registers', 'runtime state', 'controller state machine', 'PHY state', 'mux configuration', 'temporary PD state'];
+  const R = ['firmware flash', 'EEPROM', 'BIOS firmware', 'NVRAM', 'RTC / CMOS (own supply)'];
+  let s = '';
+  const bucket = (x, title, sub, items, role, lost) => {
+    const c = ROLE[role];
+    let g = `<path d="M${x},90 L${x + 30},520 H${x + 430} L${x + 460},90" fill="#0c1b14" stroke="${c}" stroke-width="2.5" ${lost ? '' : 'filter="url(#glow)"'}/>`;
+    g += TH(x + 230, 60, title, 'mid', `style="font-size:21px;fill:${c}"`) + T(x + 230, 80, sub, 'mid ts c-dim');
+    items.forEach((it, i) => {
+      const y = 120 + i * 54, w = 340;
+      g += `<g ${lost ? 'opacity=".5"' : ''}><rect x="${x + 60}" y="${y}" width="${w}" height="40" rx="6" fill="${P.bg}" stroke="${lost ? P.off : c}" stroke-width="1.6" ${lost ? 'stroke-dasharray="5 4"' : ''}/>`;
+      for (let k = 0; k < 6; k++) g += `<rect x="${x + 70 + k * 6}" y="${y + 12}" width="3" height="16" fill="${lost ? P.off : c}" opacity=".7"/>`;
+      g += T(x + 118, y + 25, it, 'tm') + (lost ? `<path d="M${x + 112},${y + 20} H${x + 390}" stroke="${P.fail}" stroke-width="2"/>` : '') + `</g>`;
+    });
+    return g;
+  };
+  s += bucket(30, 'LOST WHEN THE DOMAIN COLLAPSES', 'volatile · lives only while powered', L, collapsed ? 'fail' : 'aux', collapsed);
+  s += bucket(710, 'PERSISTS', 'non-volatile · survives power loss', R, 'pwr', false);
+  s += `<path d="M612,130 L560,300 H608 L578,470 L660,250 H612 L648,130Z" fill="${collapsed ? P.aux : P.off}" ${collapsed ? 'filter="url(#glowBig)"' : ''}/>`;
+  s += TH(605, 520, collapsed ? 'POWER LOST' : 'POWERED', 'mid', `style="font-size:16px;fill:${collapsed ? P.aux : P.ink2}"`);
+  return svgWrap(1200, 540, s, 'Volatile state is lost when a power domain collapses; non-volatile storage persists');
+}
+
+/* ================= FIG 13 — reset depth ================= */
+function fig13() {
+  const cols = ['OS / DRIVERS', 'CPU / SoC', 'MAIN RAILS', 'PD · MUX STATE', 'EC', 'BATTERY PATH', 'BIOS SETTINGS · CLOCK'];
+  // 2 = cleared, 1 = platform-dependent, 0 = survives, -1 = n/a
+  const rows = [
+    ['LEVEL 1', 'WINDOWS RESTART', 'warm reset, OS-driven', [2, 2, 0, 0, 0, 0, 0]],
+    ['LEVEL 2', 'FORCED SHUTDOWN', 'hold > 4 s · ACPI override → S5', [2, 2, 2, 1, 0, 0, 0]],
+    ['LEVEL 3', 'RESIDUAL / HARDWARE POWER RESET', 'AC + dock out, hold ≈ 15–20 s', [2, 2, 2, 2, 1, 0, 0]],
+    ['LEVEL 4', 'EC / BATTERY DISCONNECT RESET', 'pinhole · BIOS battery-disable', [2, 2, 2, 2, 2, 2, 1]],
+    ['LEVEL 5', 'RTC / CMOS / NVRAM RESET', 'configuration reset — a different axis', [-1, -1, -1, -1, -1, -1, 2]]
+  ];
+  let s = TH(40, 44, 'RESET DEPTH · WHAT EACH ONE ACTUALLY CLEARS', 'txl') + T(40, 64, 'Not interchangeable: deeper power resets clear more volatile state; a CMOS reset clears configuration, not stuck controllers', 'ts c-dim');
+  const cx0 = 520, cw = 92;
+  cols.forEach((c, i) => s += `<text x="${cx0 + i * cw + cw / 2}" y="112" class="t ts tw c-dim" text-anchor="middle">${c.split(' · ').map((p, k) => `<tspan x="${cx0 + i * cw + cw / 2}" dy="${k ? 12 : 0}">${p}</tspan>`).join('')}</text>`);
+  rows.forEach(([lv, name, sub, v], r) => {
+    const y = 140 + r * 86, step = r < 4 ? r * 18 : 0, dep = ['#16362a', '#1a4232', '#1f4f3b', '#245d45', '#3a2f55'][r];
+    s += `<rect x="${30 + step}" y="${y}" width="${1140 - step}" height="74" rx="8" fill="${dep}" opacity=".55" stroke="${r === 4 ? P.io : '#2c5541'}" ${r === 4 ? 'stroke-dasharray="6 5"' : ''}/>`;
+    s += T(50 + step, y + 26, lv, 'ts tw', `style="fill:${r === 4 ? P.io : P.aux}"`) + TH(50 + step, y + 50, name, '', 'style="font-size:17px"') + T(50 + step, y + 66, sub, 'ts c-dim');
+    v.forEach((k, i) => {
+      const x = cx0 + i * cw + cw / 2, yy = y + 37;
+      if (k === 2) s += `<circle cx="${x}" cy="${yy}" r="13" fill="${P.pwr}" filter="url(#glow)"/>`;
+      else if (k === 1) s += `<circle cx="${x}" cy="${yy}" r="13" fill="none" stroke="${P.warn}" stroke-width="2.5"/><path d="M${x},${yy - 13} A13,13 0 0 1 ${x},${yy + 13}Z" fill="${P.warn}"/>`;
+      else if (k === 0) s += `<circle cx="${x}" cy="${yy}" r="12" fill="none" stroke="#6c7c74" stroke-width="2.5"/>`;
+      else s += T(x, yy + 5, '—', 'mid c-mute');
+    });
+  });
+  const ly = 590;
+  s += `<circle cx="60" cy="${ly}" r="9" fill="${P.pwr}"/>` + T(76, ly + 4, 'cleared / re-initialised', 'ts') + `<circle cx="290" cy="${ly}" r="9" fill="none" stroke="${P.warn}" stroke-width="2"/><path d="M290,${ly - 9} A9,9 0 0 1 290,${ly + 9}Z" fill="${P.warn}"/>` + T(306, ly + 4, 'platform-dependent (rail wiring, dock VBUS, sealed battery)', 'ts') + `<circle cx="760" cy="${ly}" r="8" fill="none" stroke="#6c7c74" stroke-width="2"/>` + T(776, ly + 4, 'survives', 'ts');
+  s += T(40, 622, 'The incident: Level 1 did not fix it, a long hold (Level 2–3 territory) did → the stuck state lived in a domain a restart never powers down.', 'ts tw c-aux');
+  return svgWrap(1200, 640, s, 'Five reset levels and what each clears');
+}
+
+/* ================= FIG 14 — OEM reset timeline ================= */
+const OEM_EVENTS = [
+  { lane: 0, t: 4, type: 'forced', label: '> 4 s → power-button override → soft-off (S5)', src: 'ACPI 6.5 §4.8.2.2.1.3', gt: true },
+  { lane: 1, t: 15, type: 'residual', label: 'Power (hard) reset · AC unplugged · ≈ 15 s', src: 'HP Support: Perform a power reset' },
+  { lane: 2, t0: 15, t1: 20, type: 'residual', label: 'Hard reset · “flea power” drain · 15–20 s', src: 'Dell KB 000139016' },
+  { lane: 3, t0: 30, t1: 35, w0: 25, w1: 40, type: 'rtc', label: 'RTC reset · AC on · ≈ 30–35 s (LED 3×) · aborts < 25 s or > 40 s', src: 'Dell KB 000125880' },
+  { lane: 4, t: 0, type: 'ec', label: 'Emergency-reset pinhole · AC removed · no duration published', src: 'Lenovo HT510479 / T460 docs', none: true },
+  { lane: 5, t: 20, type: 'forced', label: 'Force restart · ≈ 20 s until logo (newer models)', src: 'Microsoft Support 4036280' },
+  { lane: 5, t: 15, type: 'forced', label: 'Older models: power + volume-up ≈ 15 s', src: 'Microsoft Support 4036280', alt: true }
+];
+const OEM_TYPES = { forced: [P.main, 'FORCED SHUTDOWN'], residual: [P.pwr, 'HARDWARE / RESIDUAL RESET'], ec: [P.warn, 'EC / BATTERY-DISCONNECT RESET'], rtc: [P.io, 'RTC RESET'] };
+function fig14(compact = false) {
+  const X0 = 270, X1 = 1150, tx = t => X0 + t / 60 * (X1 - X0);
+  const lanes = ['ACPI SPEC · ALL PCs', 'HP · EliteBook / ProBook / ZBook', 'DELL · Latitude / Precision', 'DELL · RTC', 'LENOVO · ThinkPad', 'MICROSOFT · Surface'];
+  const LY = i => 130 + i * 62;
+  let s = '';
+  if (!compact) s += TH(40, 44, 'OEM-DOCUMENTED POWER-BUTTON PROCEDURES · 0–60 s', 'txl') + T(40, 64, 'Only timings found in OEM / spec documentation are plotted · hover a mark for its source', 'ts c-dim');
+  Object.values(OEM_TYPES).forEach(([c, l], i) => s += `<rect x="${40 + i * 260}" y="82" width="16" height="10" rx="2" fill="${c}"/>` + T(62 + i * 260, 92, l, 'ts'));
+  s += T(1150, 92, 'no OEM-published battery-reset timing', 'end ts c-mute');
+  [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60].forEach(t => {
+    const major = [0, 5, 10, 15, 20, 25, 30, 40, 45, 60].includes(t);
+    s += `<path d="M${tx(t)},112 V${LY(5) + 30}" stroke="${major ? '#18301f' : '#10221a'}" stroke-width="1"/>` + (major ? T(tx(t), LY(5) + 52, t + (t === 0 ? ' s' : ''), 'mid ts c-dim') : '');
+  });
+  lanes.forEach((l, i) => s += `<path d="M${X0},${LY(i)} H${X1}" stroke="#1e3a2b" stroke-width="1"/>` + T(40, LY(i) + 4, l, 'ts tw'));
+  // 45 s marker
+  s += `<rect x="${tx(45) - 18}" y="104" width="36" height="${LY(5) - 74}" fill="rgba(233,240,230,.06)"/><path d="M${tx(45)},104 V${LY(5) + 30}" stroke="${P.silk}" stroke-width="2.5" filter="url(#glow)"/>`;
+  s += `<rect x="${tx(45) - 54}" y="${LY(5) + 34}" width="108" height="26" rx="13" fill="${P.silk}"/>` + TH(tx(45), LY(5) + 52, '45 s · YOUR HOLD', 'mid', `style="font-size:13px;fill:${P.bg}"`);
+  OEM_EVENTS.forEach(e => {
+    const [c] = OEM_TYPES[e.type]; const y = LY(e.lane) + (e.alt ? 16 : 0);
+    let g = `<g class="tip" data-tip="${esc(e.label + ' — ' + e.src)}">`;
+    if (e.w0 != null) g += `<rect x="${tx(e.w0)}" y="${y - 12}" width="${tx(e.w1) - tx(e.w0)}" height="24" fill="url(#hatchGray)" stroke="${c}" stroke-dasharray="4 3" opacity=".9"/>`;
+    if (e.t0 != null) g += `<rect x="${tx(e.t0)}" y="${y - 8}" width="${tx(e.t1) - tx(e.t0)}" height="16" rx="4" fill="${c}" filter="url(#glow)"/>`;
+    else if (e.none) g += `<circle cx="${tx(0)}" cy="${y}" r="9" fill="${P.bg}" stroke="${c}" stroke-width="2.5" stroke-dasharray="3 2"/>`;
+    else g += `<path d="M${tx(e.t)},${y - 11} l9,11 -9,11 -9,-11z" fill="${c}" filter="url(#glow)"/>` + (e.gt ? `<path d="M${tx(e.t) + 12},${y} H${tx(e.t) + 46}" stroke="${c}" stroke-width="2" marker-end="url(#ar-main)"/>` : '');
+    const lx = e.none ? tx(0) + 18 : (e.t1 != null ? tx(e.t1) + 12 : tx(e.t) + (e.gt ? 54 : 16));
+    if (!compact || !e.alt) g += T(e.w1 != null ? tx(e.w1) : lx, e.w1 != null ? y - 18 : y + (e.alt ? 4 : -14), e.label, e.w1 != null ? 'ts end' : 'ts', `style="fill:#cfdcd2${compact ? ';font-size:9px' : ''}"`);
+    s += g + `<title>${esc(e.label + ' — ' + e.src)}</title></g>`;
+  });
+  if (!compact) {
+    s += `<rect x="40" y="${LY(5) + 76}" width="1110" height="92" rx="8" fill="#0a1611" stroke="${P.line}"/>`;
+    s += TH(60, LY(5) + 106, 'IS 45 SECONDS ACTUALLY SPECIAL?', '', 'style="font-size:19px"') + TH(420, LY(5) + 106, 'NO — IT IS MARGIN, NOT MAGIC.', '', `style="font-size:19px;fill:${P.pwr}"`);
+    s += T(60, LY(5) + 130, 'Every verified threshold above is ≤ 40 s. A 45 s hold passes all of them, so whichever one this laptop uses, it fired.', 'ts');
+    s += T(60, LY(5) + 150, 'Caution: Dell’s RTC reset aborts if held > 40 s with AC connected — longer is not automatically “deeper”.', 'ts', `style="fill:${P.warn}"`);
+  }
+  return svgWrap(1200, compact ? 560 : 700, s, 'Timeline of OEM-documented power-button reset procedures with 45 second marker');
+}
+
+/* ================= FIG 15 — why 45 s may have worked ================= */
+function fig15() {
+  let s = TH(40, 44, 'WHY A 45-SECOND HOLD MAY HAVE WORKED', 'txl') + T(40, 64, 'Proportional bar · regulator + rail timing is board-dependent (ms → s); everything after it is margin', 'ts c-dim');
+  const X0 = 60, X1 = 1140, tx = t => X0 + t / 45 * (X1 - X0);
+  const steps = [
+    [0, 'POWER BUTTON HELD', 'EC starts counting', P.ink],
+    [4, 'FORCED-OFF THRESHOLD', 'ACPI > 4 s · OEM/platform dependent', P.main],
+    [4.2, 'REGULATORS DISABLED', 'EC drops EN lines', P.warn],
+    [5.2, 'RAILS COLLAPSE', 'capacitors drain through loads', P.aux],
+    [6.2, 'RETENTION THRESHOLD CROSSED', 'controller can no longer hold state', P.fail],
+    [7.2, 'VOLATILE STATE LOST', 'stuck Alt Mode / mux state gone', P.off]
+  ];
+  steps.forEach(([t, n, d, c], i) => {
+    const y = 100 + i * 52;
+    s += `<circle cx="80" cy="${y}" r="10" fill="${P.bg}" stroke="${c}" stroke-width="3"/>` + (i < steps.length - 1 ? `<path d="M80,${y + 10} V${y + 42}" stroke="#2c4a3a" stroke-width="2"/>` : '');
+    s += TH(104, y + 6, n, '', 'style="font-size:16px"') + T(420, y + 5, d, 'ts c-dim');
+  });
+  s += `<path d="M80,380 V412" stroke="#2c4a3a" stroke-width="2" stroke-dasharray="4 4"/><circle cx="80" cy="424" r="12" fill="${P.silk}"/>` + TH(104, 432, '45 s · RELEASED', '', 'style="font-size:20px"') + TH(330, 432, '“large timing margin”', '', `style="font-size:18px;fill:${P.pwr}"`);
+  // proportional bar
+  const by = 486;
+  s += `<rect x="${tx(0)}" y="${by}" width="${tx(4) - tx(0)}" height="40" fill="${P.main}" opacity=".85"/>` + `<rect x="${tx(4)}" y="${by}" width="${tx(7.2) - tx(4)}" height="40" fill="${P.aux}" opacity=".9"/>` + `<rect x="${tx(7.2)}" y="${by}" width="${tx(45) - tx(7.2)}" height="40" fill="url(#hatchGray)" stroke="${P.pwr}" stroke-width="2"/>`;
+  s += T(tx(2), by + 62, 'wait for EC', 'mid ts c-main') + T(tx(5.6), by + 62, 'off + decay*', 'mid ts c-aux') + TH(tx(26), by + 27, 'MARGIN ≈ 38 s', 'mid', `style="font-size:18px;fill:${P.pwr}"`);
+  [0, 5, 10, 15, 20, 25, 30, 35, 40, 45].forEach(t => s += T(tx(t), by - 8, t + 's', 'mid ts c-mute'));
+  // equation cards
+  s += `<g transform="translate(700,92)"><rect width="440" height="120" rx="10" fill="#140b0b" stroke="${P.fail}"/>` + icon('i-x', 20, 22, 40, P.fail) + TH(76, 52, '45 s ≠ STRONGER DRAIN', '', 'style="font-size:22px"') + T(76, 78, 'The button never carries the discharge current.', 'ts c-dim') + T(76, 96, 'Holding longer does not pull harder on the rails.', 'ts c-dim') + `</g>`;
+  s += `<g transform="translate(700,228)"><rect width="440" height="120" rx="10" fill="#0a1a12" stroke="${P.pwr}"/>` + icon('i-ok', 20, 22, 40, P.pwr) + TH(76, 52, '45 s = MORE TIMING MARGIN', '', 'style="font-size:22px"') + T(76, 78, 'It outlasts every documented threshold and', 'ts c-dim') + T(76, 96, 'leaves seconds for slow-bleeding rails to reach 0 V.', 'ts c-dim') + `</g>`;
+  s += T(700, 372, '…unless a specific OEM uses a timed routine that needs a longer hold.', 'ts', `style="fill:${P.warn}"`);
+  s += T(60, 576, '* decay segment is illustrative; real rails clear in milliseconds to seconds depending on capacitance and bleed resistance (see FIG 10).', 'ts c-mute');
+  return svgWrap(1200, 590, s, 'Why a 45 second hold may have worked: timing margin');
+}
+
+/* ===== figs-c.js ===== */
+/* figs-c.js — FIG 16, 17, 18, 21 + master-infographic helpers */
+
+/* ================= FIG 16 — diagnostic decision tree ================= */
+const TREE = {
+  q1: { q: 'IS THE LAPTOP CHARGING?', yes: 'q2', no: 'A' },
+  q2: { q: 'ARE USB DEVICES WORKING?', yes: 'B', no: 'q3' },
+  q3: { q: 'ARE DISPLAYS ALSO MISSING?', yes: 'q6', no: 'C' },
+  q6: { q: 'IS ANY DOCK DEVICE IN DEVICE MANAGER?', yes: 'X', no: 'D' },
+  q4: { q: 'DID A WINDOWS RESTART FIX IT?', yes: 'E', no: 'F' },
+  q5: { q: 'DID FUNCTION RETURN?', yes: 'G', no: 'H' }
+};
+const TREE_LEAF = {
+  A: ['POWER PATH', 'Investigate charger, cable, VBUS, CC, PD contract. Try a known-good USB-C charger directly.', 'warn'],
+  B: ['DISPLAY PATH ONLY', 'USB works, so lanes + controller are alive. Check DP Alt Mode, MST / monitor settings, display cable, graphics driver.', 'main'],
+  C: ['USB PATH ONLY', 'Displays fine, USB missing: dock hub, xHCI, USB selective-suspend, drivers.', 'main'],
+  X: ['ALT MODE / LANE PATH', 'Hub or Billboard device visible, so USB 2.0 works: focus on DP Alt Mode, mux, retimer, dock graphics controller.', 'main'],
+  D: ['BEFORE ANY USB ENUMERATION', 'Shared domain upstream of USB 2.0 and Alt Mode: PD connection / data-role state · EC ↔ PD ↔ SoC handshake · dock hub power / firmware.', 'fail'],
+  E: ['SOFTWARE / DRIVER STATE', 'A warm reset was enough: xHCI, graphics or OS power-policy state. Update drivers.', 'main'],
+  F: ['HARDWARE POWER RESET', 'Unplug the dock, hold the power button past the forced-off threshold (15–20 s per HP / Dell docs; 45 s also works), reconnect.', 'aux'],
+  G: ['TRANSIENT CONTROLLER / LINK STATE', 'Strong hypothesis — not proof. Next: update dock firmware, BIOS, PD / retimer firmware, graphics + chipset drivers; log each recurrence.', 'pwr'],
+  H: ['PERSISTENT FAULT', 'Swap cable / dock, test another host, re-flash dock firmware, escalate to hardware service.', 'fail']
+};
+const TREE_INCIDENT = { q1: 'yes', q2: 'no', q3: 'yes', q6: 'no', q4: 'no', q5: 'yes' };
+function fig16(ans = TREE_INCIDENT, sel = null) {
+  // active path
+  const active = new Set(['start', 'q1']);
+  let cur = 'q1';
+  const seq = { D: 'q4', F: 'q5' };
+  while (cur) {
+    const nxt = TREE[cur] ? TREE[cur][ans[cur]] : seq[cur];
+    if (!nxt) break; active.add(nxt); cur = nxt;
+  }
+  const pos = { start: [360, 50], q1: [360, 150], q2: [360, 275], q3: [360, 400], q6: [360, 525], D: [360, 650], q4: [360, 780], F: [360, 905], q5: [360, 1030], G: [360, 1150], A: [850, 150], B: [850, 275], C: [850, 400], X: [850, 525], E: [850, 780], H: [850, 1030] };
+  const on = id => active.has(id);
+  let s = '';
+  const link = (a, b, label, side) => {
+    const [x1, y1] = pos[a], [x2, y2] = pos[b]; const lit = on(a) && on(b);
+    const c = lit ? (side ? P.silk : P.pwr) : '#2a4636';
+    const d = side ? `M${x1 + 230},${y1} H${x2 - 210}` : `M${x1},${y1 + 34} V${y2 - 34}`;
+    s += `<path d="${d}" class="tr" stroke="${c}" stroke-width="${lit ? 3 : 2}" ${lit ? 'filter="url(#glow)"' : 'stroke-dasharray="5 5"'} marker-end="url(#ar-${lit ? (side ? 'ink' : 'pwr') : 'off'})"/>`;
+    if (label) s += tag(side ? x1 + 250 : x1 + 14, side ? y1 - 8 : (y1 + y2) / 2 + 4, label, lit ? P.silk : '#5d7a6a');
+  };
+  link('start', 'q1');
+  Object.entries(TREE).forEach(([id, n]) => {
+    const yesSide = pos[n.yes][0] > 600, noSide = pos[n.no][0] > 600;
+    link(id, n.yes, 'YES', yesSide); link(id, n.no, 'NO', noSide);
+  });
+  link('D', 'q4'); link('F', 'q5');
+  const node = (id, w, title, role, q) => {
+    const [x, y] = pos[id]; const lit = on(id); const c = lit ? (ROLE[role] || role) : '#2c4a3a';
+    let g = `<g class="tnode" data-node="${id}" tabindex="0" role="button" aria-label="${esc(title)}" style="cursor:pointer">`;
+    g += `<rect x="${x - w / 2}" y="${y - 32}" width="${w}" height="64" rx="${q ? 32 : 8}" fill="${role === 'fail' && lit ? 'url(#hatchRed)' : P.bg}" stroke="${sel === id ? P.silk : c}" stroke-width="${sel === id ? 3 : 2}" ${lit ? 'filter="url(#glow)"' : ''}/>`;
+    if (role === 'fail' && lit) g += `<rect x="${x - w / 2}" y="${y - 32}" width="${w}" height="64" rx="8" fill="${P.bg}" opacity=".5"/>`;
+    g += TH(x, y + (q ? 7 : -2), title, 'mid', `style="font-size:${title.length > 26 ? 15 : 17}px;fill:${lit ? P.silk : '#6c8576'}"`);
+    if (q && TREE[id]) g += T(x, y + 24, `answer: ${ans[id].toUpperCase()} · click to flip`, 'mid', `style="font-size:9px;fill:${lit ? P.ink2 : '#4d6457'}"`);
+    if (!q && TREE_LEAF[id]) g += T(x, y + 18, 'click for detail', 'mid', `style="font-size:9px;fill:${lit ? P.ink2 : '#4d6457'}"`);
+    return g + `</g>`;
+  };
+  s += node('start', 300, 'DOCK CONNECTED', 'pwr', true);
+  Object.entries(TREE).forEach(([id, n]) => s += node(id, 420, n.q, 'aux', true));
+  Object.entries(TREE_LEAF).forEach(([id, [t, , role]]) => s += node(id, ['D', 'F', 'G'].includes(id) ? 440 : 400, t, role, false));
+  // incident badge
+  const isIncident = Object.keys(TREE_INCIDENT).every(k => ans[k] === TREE_INCIDENT[k]);
+  s += `<g transform="translate(620,1118)"><rect width="570" height="64" rx="8" fill="#0a1611" stroke="${isIncident ? P.pwr : P.line}"/>` + T(16, 26, isIncident ? 'SHOWING: YOUR INCIDENT PATH' : 'SHOWING: A DIFFERENT PATH', 'ts tw', `style="fill:${isIncident ? P.pwr : P.aux}"`) + T(16, 46, 'Charging YES · USB NO · Displays missing · not in Device Mgr · restart NO · reset YES', 'ts c-dim') + `</g>`;
+  return svgWrap(1200, 1200, s, 'Interactive diagnostic decision tree');
+}
+/* compact horizontal version for the master infographic */
+function fig16h() {
+  let s = '';
+  const steps = [['DOCK', 'CONNECTED', 'pwr'], ['CHARGING?', 'YES', 'pwr'], ['USB WORKING?', 'NO', 'fail'], ['DISPLAYS?', 'MISSING', 'fail'], ['IN DEVICE MGR?', 'NOT AT ALL', 'fail'], ['PRE-USB STATE', 'PD conn · EC', 'warn'], ['RESTART FIXED?', 'NO', 'fail'], ['HARD RESET', 'hold power', 'aux'], ['RETURNED?', 'YES', 'pwr'], ['TRANSIENT STATE', 'strong hypothesis', 'pwr']];
+  steps.forEach(([a, b, r], i) => {
+    const x = 20 + i * 236, c = ROLE[r];
+    s += `<rect x="${x}" y="40" width="204" height="86" rx="10" fill="${P.bg}" stroke="${c}" stroke-width="2.5" filter="url(#glow)"/>` + TH(x + 102, 78, a, 'mid', 'style="font-size:19px"') + T(x + 102, 104, b, 'mid tm tw', `style="fill:${c}"`);
+    if (i < steps.length - 1) s += arrow(`M${x + 206},83 H${x + 232}`, 'ink', 3);
+  });
+  s += T(20, 160, 'Side exits: not charging → charger / cable / PD   ·   USB OK → display path only   ·   dock visible in Device Manager → Alt Mode / lane path   ·   restart fixes it → driver / OS state   ·   reset fails → hardware fault', 'tm c-dim');
+  return svgWrap(2380, 180, s, 'Decision path summary');
+}
+
+/* ================= FIG 17 — before / reset / after ================= */
+function fig17() {
+  let s = '';
+  const panel = (x, n, title, c) => `<rect x="${x}" y="20" width="380" height="600" rx="10" fill="#0a1611" stroke="${c}" stroke-opacity=".7"/>` + T(x + 20, 50, 'PANEL ' + n, 'ts tw', `style="fill:${c}"`) + TH(x + 20, 82, title, 'txl');
+  const chip = (x, y, ok) => {
+    const c = ok ? P.pwr : P.fail;
+    return `<g>${qfn(x, y, 120, 120, { label: 'PD CTRL', sub: ok ? 'FRESH STATE' : 'STUCK STATE' })}<rect x="${x - 10}" y="${y - 10}" width="140" height="140" rx="10" fill="${ok ? 'none' : 'url(#hatchRed)'}" stroke="${c}" stroke-width="3" filter="url(#glow)" ${ok ? '' : 'class="pulse"'}/></g>`;
+  };
+  // 1
+  s += panel(20, 1, 'BEFORE', P.fail) + chip(150, 130, false);
+  s += statusPill(60, 330, 'pwr', true, 'POWER', 300) + statusPill(60, 378, 'usb', false, 'USB', 300) + statusPill(60, 426, 'dp', false, 'DISPLAY', 300);
+  s += TL(60, 500, 'Contract is up and charging,\nbut the controller’s volatile state\nis wrong, and restart never\npowers it down.', 18, 'ts c-dim');
+  // 2
+  s += panel(410, 2, 'RESET', P.aux);
+  const ch = [['POWER BUTTON', 'ink'], ['EC', 'aux'], ['PMIC', 'warn'], ['RAILS COLLAPSE', 'off'], ['VOLTAGE DECAY', 'aux'], ['VOLATILE STATE LOST', 'fail']];
+  ch.forEach(([t, r], i) => {
+    const y = 110 + i * 78;
+    s += `<rect x="450" y="${y}" width="300" height="46" rx="8" fill="${P.bg}" stroke="${ROLE[r]}" stroke-width="2" ${r !== 'off' ? 'filter="url(#glow)"' : ''}/>` + TH(600, y + 30, t, 'mid', 'style="font-size:17px"');
+    if (r === 'aux' && i === 4) s += `<path d="M666,${y + 10} H690 C706,${y + 10} 712,${y + 38} 738,${y + 38}" class="tr" stroke="${P.aux}" stroke-width="2"/>`;
+    if (i < ch.length - 1) s += arrow(`M600,${y + 46} V${y + 76}`, 'ink', 2);
+  });
+  // 3
+  s += panel(800, 3, 'AFTER', P.pwr);
+  const ch3 = ['CC', 'PD', 'ALT MODE', 'USB', 'WINDOWS'];
+  ch3.forEach((t, i) => {
+    const x = 830 + i * 66;
+    s += `<rect x="${x}" y="110" width="58" height="40" rx="6" fill="${P.bg}" stroke="${P.pwr}" stroke-width="2" filter="url(#glow)"/>` + T(x + 29, 135, t, 'mid', `style="font-size:${t.length > 4 ? 8 : 11}px;font-weight:700"`);
+    if (i < 4) s += `<path d="M${x + 58},130 h8" stroke="${P.pwr}" stroke-width="2"/>`;
+  });
+  s += chip(930, 190, true);
+  s += statusPill(840, 360, 'pwr', true, 'POWER', 300) + statusPill(840, 408, 'usb', true, 'USB · ETHERNET', 300) + statusPill(840, 456, 'dp', true, 'DISPLAYS', 300);
+  s += TL(840, 530, 'Same hardware, clean state:\nthe chain re-negotiates\nfrom stage 1.', 18, 'ts c-dim');
+  s += arrow('M400,320 H406', 'ink', 3) + arrow('M790,320 H796', 'ink', 3);
+  return svgWrap(1200, 640, s, 'Before, reset, after');
+}
+
+/* ================= FIG 18 — exploded isometric laptop ================= */
+function fig18() {
+  const k = 0.95, cx = 430, cy = 392;
+  const iso = (x, y, z) => [cx + (x - y) * 0.866 * k, cy + (x + y) * 0.5 * k - z * k];
+  const poly = pts => pts.map(p => p.map(v => v.toFixed(1)).join(',')).join(' ');
+  const plane = (x, y, w, d, z) => [iso(x, y, z), iso(x + w, y, z), iso(x + w, y + d, z), iso(x, y + d, z)];
+  const prism = (x, y, w, d, z, h, top, side1, side2, extra = '') =>
+    `<polygon points="${poly([iso(x, y + d, z), iso(x + w, y + d, z), iso(x + w, y + d, z + h), iso(x, y + d, z + h)])}" fill="${side1}" ${extra}/>` +
+    `<polygon points="${poly([iso(x + w, y, z), iso(x + w, y + d, z), iso(x + w, y + d, z + h), iso(x + w, y, z + h)])}" fill="${side2}" ${extra}/>` +
+    `<polygon points="${poly(plane(x, y, w, d, z + h))}" fill="${top}" stroke="#00000055" ${extra}/>`;
+  const line = (pts, c, w, extra = '') => `<polyline points="${poly(pts)}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" ${extra}/>`;
+  const W = 520, D = 340, ZB = 180, ZBAT = 80, ZTOP = 345;
+  const anchors = {};
+  let s = '';
+  // bottom cover
+  s += prism(0, 0, W, D, 0, 8, '#1b2320', '#121815', '#0e1311');
+  anchors.bottom = iso(W, D / 2, 4);
+  // battery
+  s += prism(60, 190, 400, 120, ZBAT, 14, '#202b25', '#151d19', '#111714');
+  [0, 1, 2].forEach(i => s += `<polygon points="${poly(plane(72 + i * 130, 200, 120, 100, ZBAT + 14.5))}" fill="#2b3a32" stroke="#3f5246"/>`);
+  s += line([iso(250, 250, ZBAT + 15), iso(250, 250, ZB)], P.pwr, 3, 'stroke-dasharray="4 4"');
+  anchors.bat = iso(460, 250, ZBAT + 7);
+  // motherboard
+  s += prism(0, 0, W, D - 150, ZB, 5, '#0d2a1b', '#0a1f14', '#081a11');
+  s += `<polygon points="${poly(plane(0, 0, W, D - 150, ZB + 5.2))}" fill="url(#pcbTex)" opacity=".8"/>`;
+  anchors.mb = iso(W, 95, ZB + 2);
+  const zt = ZB + 5.5;
+  // traces on board
+  s += line([iso(8, 120, zt), iso(8, 175, zt), iso(150, 175, zt)], P.pwr, 4, 'filter="url(#glow)"');
+  s += line([iso(200, 160, zt), iso(330, 160, zt), iso(330, 140, zt)], P.pwr, 4, 'filter="url(#glow)"');
+  s += line([iso(250, 150, zt), iso(250, 95, zt), iso(215, 95, zt)], P.aux, 3, 'filter="url(#glow)"');
+  s += line([iso(185, 80, zt), iso(110, 55, zt), iso(85, 55, zt)], P.aux, 3, 'filter="url(#glow)"');
+  s += line([iso(200, 150, zt), iso(300, 120, zt), iso(340, 95, zt)], P.main, 3, 'filter="url(#glow)"');
+  s += line([iso(345, 125, zt), iso(110, 125, zt)], P.fail, 3.5, 'filter="url(#glow)"');
+  s += line([iso(60, 125, zt), iso(20, 100, zt)], P.fail, 3.5, 'filter="url(#glow)"');
+  s += line([iso(450, 90, zt), iso(420, 90, zt)], P.io, 3, 'filter="url(#glow)"');
+  // floating components with drop lines
+  const comp = (key, x, y, w, d, lift, h, top, glowC, label) => {
+    const z = zt + lift;
+    let g = line([iso(x + w / 2, y + d / 2, zt), iso(x + w / 2, y + d / 2, z)], glowC, 1.2, 'stroke-dasharray="3 4" opacity=".8"');
+    g += `<polygon points="${poly(plane(x, y, w, d, zt))}" fill="${glowC}" opacity=".18"/>`;
+    g += prism(x, y, w, d, z, h, top, '#0b0d0e', '#16191b');
+    g += `<polygon points="${poly(plane(x, y, w, d, z + h))}" fill="none" stroke="${glowC}" stroke-width="2" filter="url(#glow)"/>`;
+    if (label) { const [lx, ly] = iso(x + w / 2, y + d / 2, z + h); g += `<text x="${lx}" y="${ly + 4}" class="t mid" style="font-size:9px;font-weight:700">${label}</text>`; }
+    anchors[key] = iso(x + w, y + d / 2, z + h / 2);
+    return g;
+  };
+  // port is on the edge
+  s += prism(-14, 85, 22, 50, zt, 14, '#9aa4aa', '#6d777c', '#59636a');
+  anchors.port = iso(-14, 110, zt + 7);
+  s += comp('pd', 40, 35, 50, 45, 55, 8, '#1a1e21', P.fail, 'PD');
+  s += comp('mux', 60, 105, 55, 45, 42, 8, '#1a1e21', P.fail, 'MUX/RT');
+  s += comp('ec', 180, 60, 60, 60, 70, 9, '#1a1e21', P.aux, 'EC');
+  s += comp('pmic', 150, 140, 60, 45, 30, 9, '#1a1e21', P.pwr, 'PMIC');
+  s += comp('cpu', 320, 60, 100, 100, 50, 12, '#3a434a', P.main, 'SoC');
+  s += comp('gpu', 440, 50, 60, 60, 80, 10, '#3a434a', P.io, 'GPU');
+  // chassis / keyboard deck (translucent)
+  s += `<polygon points="${poly(plane(0, 0, W, D, ZTOP))}" fill="#1b2420" fill-opacity=".14" stroke="#7d8c84" stroke-width="1.5"/>`;
+  for (let r = 0; r < 5; r++) for (let c = 0; c < 13; c++) s += `<polygon points="${poly(plane(48 + c * 33, 30 + r * 30, 27, 24, ZTOP + 0.5))}" fill="none" stroke="#56645c" stroke-width=".8" stroke-opacity=".7"/>`;
+  s += `<polygon points="${poly(plane(190, 200, 140, 100, ZTOP + 0.5))}" fill="none" stroke="#56645c"/>`;
+  anchors.chassis = iso(W, 0, ZTOP);
+  // callouts
+  const call = [['chassis', 'LAPTOP CHASSIS · keyboard deck', P.ink], ['mb', 'MOTHERBOARD', P.pwr], ['port', 'USB-C PORT', P.io], ['pd', 'USB-C PD CONTROLLER', P.fail], ['mux', 'MUX / RETIMER', P.fail], ['ec', 'EMBEDDED CONTROLLER', P.aux], ['pmic', 'PMIC / CHARGER IC', P.pwr], ['cpu', 'CPU / SoC', P.main], ['gpu', 'GPU / DISPLAY PATH', P.io], ['bat', 'BATTERY', P.pwr], ['bottom', 'BOTTOM COVER', P.ink2]];
+  call.sort((p, q) => anchors[p[0]][1] - anchors[q[0]][1]);
+  call.forEach(([k2, l, c], i) => {
+    const y = 60 + i * 64, [ax, ay] = anchors[k2];
+    s += `<path d="M${ax.toFixed(1)},${ay.toFixed(1)} L${930},${y} H${948}" fill="none" stroke="${c}" stroke-width="1.2" opacity=".75"/><circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="3.5" fill="${c}"/>`;
+    s += T(956, y + 4, l, 'tw', `style="fill:${c === P.ink2 ? P.ink2 : P.silk}"`) + `<rect x="956" y="${y + 10}" width="${l.length * 7.2}" height="2" fill="${c}" opacity=".8"/>`;
+  });
+  s += T(40, 40, 'TOP', 'ts tw c-dim') + T(40, 780, 'BOTTOM', 'ts tw c-dim') + `<path d="M58,52 V762" stroke="#2c4a3a" stroke-width="1.5" marker-start="url(#ar-off)" marker-end="url(#ar-off)"/>`;
+  return svgWrap(1200, 800, s, 'Exploded isometric view of the laptop with glowing power and data paths');
+}
+
+/* ================= FIG 21 — hypothesis map ================= */
+const HYPO = [
+  { id: 'pd', name: 'PD CONTROLLER CONNECTION / DATA-ROLE STATE', v: 'pwr', verdict: 'CONSISTENT', for: ['Contract stayed valid (charging) while no USB device of any kind appeared', 'The PD controller reports “USB connected / data role” to the host; if that never happens, even USB 2.0 stays off on many current platforms', 'Often fed from AUX or VBUS, so a restart does not power it down', 'Cleared after a forced power-off'], against: ['Cannot be told apart from EC firmware or the SoC Type-C subsystem without logs'] },
+  { id: 'ec', name: 'EC ↔ PD ↔ SoC CONNECTION HANDSHAKE', v: 'pwr', verdict: 'CONSISTENT', for: ['On many designs the EC relays PD connection status to the SoC (and to Windows via UCSI)', 'EC and PD state both survive a Windows restart', 'A long hold is exactly the event that makes the EC re-sequence everything'], against: ['No other EC symptoms reported (battery, keyboard, power LED fine)'] },
+  { id: 'dock', name: 'DOCK CONTROLLER (DMC / HUB / GRAPHICS)', v: 'aux', verdict: 'POSSIBLE', for: ['A dock whose hub never powers up looks identical from the host: nothing in Device Manager', 'The laptop reset forced a fresh PD contract, which can re-initialise dock logic', 'HP ships dock firmware fixes for detection and network drops'], against: ['The dock kept its own adapter power throughout the laptop reset'] },
+  { id: 'alt', name: 'ALT MODE STATE MACHINE (ALONE)', v: 'aux', verdict: 'POSSIBLE · PART', for: ['Explains missing displays and USB 3'], against: ['Cannot explain the missing USB 2.0 devices: USB 2.0 needs no Alt Mode', 'A compliant dock that fails Alt Mode shows a USB Billboard device — none appeared'] },
+  { id: 'mux', name: 'MUX / RETIMER STATE (ALONE)', v: 'fail', verdict: 'LESS CONSISTENT', for: ['Wrong routing kills USB 3 + DP together'], against: ['USB 2.0 D+/D− bypasses the SuperSpeed mux, yet USB 2.0 was gone too', 'Usually on S0 rails that a restart may also cycle'] },
+  { id: 'xhci', name: 'USB CONTROLLER / xHCI', v: 'fail', verdict: 'LESS CONSISTENT', for: ['Would explain missing USB + Ethernet'], against: ['A Windows restart re-initialises xHCI — it did not help', 'xHCI does not carry DisplayPort'] },
+  { id: 'os', name: 'OS / DISPLAY DRIVER', v: 'fail', verdict: 'LESS CONSISTENT', for: ['Drivers can lose devices'], against: ['Restart reloads every driver — no change', 'A driver fault usually leaves a device with an error, not no device at all'] },
+  { id: 'cable', name: 'CABLE / PHYSICAL CONNECTION', v: 'fail', verdict: 'LESS CONSISTENT', for: ['Broken data wires could keep power but drop all data'], against: ['Fixed without touching the cable', 'Physical faults usually persist across resets'] },
+  { id: 'trigger', name: 'ROOT TRIGGER (FW BUG · SLEEP/WAKE RACE · ESD)', v: 'off', verdict: 'CANNOT DETERMINE', for: ['Something put the controller in that state'], against: ['No logs or reproduction — the evidence cannot say what'] }
+];
+function fig21(sel = null) {
+  let s = '';
+  const cx = 600, cy = 400;
+  HYPO.forEach((h, i) => {
+    const a = -Math.PI / 2 + i * (2 * Math.PI / HYPO.length);
+    const x = cx + Math.cos(a) * 430, y = cy + Math.sin(a) * 290, c = ROLE[h.v] === P.off ? '#7f8f86' : ROLE[h.v];
+    s += `<path d="M${cx + Math.cos(a) * 130},${cy + Math.sin(a) * 130} L${x - Math.cos(a) * 60},${y - Math.sin(a) * 30}" stroke="${c}" stroke-width="${h.v === 'pwr' ? 3 : 2}" ${h.v === 'pwr' ? '' : 'stroke-dasharray="6 5"'} opacity=".8"/>`;
+    const w = 250;
+    s += `<g class="hnode" data-h="${h.id}" tabindex="0" role="button" aria-label="${esc(h.name)}" style="cursor:pointer"><rect x="${x - w / 2}" y="${y - 36}" width="${w}" height="72" rx="10" fill="${P.bg}" stroke="${sel === h.id ? P.silk : c}" stroke-width="${sel === h.id ? 3 : 2}" ${h.v === 'pwr' ? 'filter="url(#glow)"' : ''} ${h.v === 'off' ? 'stroke-dasharray="4 3"' : ''}/>`;
+    const words = h.name.split(' '); let l1 = '', l2 = '';
+    words.forEach(wd => { if ((l1 + ' ' + wd).trim().length <= 24 && !l2) l1 = (l1 + ' ' + wd).trim(); else l2 = (l2 + ' ' + wd).trim(); });
+    s += TH(x, y - (l2 ? 8 : 0), l1, 'mid', 'style="font-size:15px"') + (l2 ? TH(x, y + 10, l2, 'mid', 'style="font-size:15px"') : '');
+    s += T(x, y + 28, h.verdict, 'mid ts tw', `style="fill:${c}"`) + `</g>`;
+  });
+  s += `<circle cx="${cx}" cy="${cy}" r="128" fill="#0a1611" stroke="${P.silk}" stroke-width="2"/>`;
+  s += statusPill(cx - 95, cy - 88, 'pwr', true, 'CHARGING', 190) + statusPill(cx - 95, cy - 46, 'usb', false, 'USB', 190) + statusPill(cx - 95, cy - 4, 'dp', false, 'DISPLAY', 190);
+  s += TH(cx, cy + 62, '45-SECOND RESET', 'mid', 'style="font-size:18px"') + TH(cx, cy + 84, 'FIXED IT', 'mid', `style="font-size:18px;fill:${P.pwr}"`);
+  const lg = [[P.pwr, 'CONSISTENT WITH EVIDENCE (not proven)'], [P.aux, 'POSSIBLE'], [P.fail, 'LESS CONSISTENT'], ['#7f8f86', 'CANNOT DETERMINE']];
+  lg.forEach(([c, l], i) => s += `<rect x="${40 + i * 290}" y="770" width="18" height="10" rx="2" fill="${c}"/>` + T(64 + i * 290, 780, l, 'ts'));
+  return svgWrap(1200, 800, s, 'Root-cause hypothesis map');
+}
+
+/* ===== sim.js ===== */
+/* sim.js — FIG 20: conceptual power-rail simulator (logic-analyzer view).
+   Not a model of any specific laptop: rail sequencing is platform-specific. */
+
+const SIM_RAILS = [
+  { id: 'vbus', name: 'VBUS (from dock)', nom: 20, role: 'pwr', tauOff: 0.25 },
+  { id: 'vbat', name: 'BATTERY VOLTAGE', nom: 12.3, role: 'pwr', tauOff: 50 },
+  { id: 'vsys', name: 'SYSTEM BUS · VSYS', nom: 12.6, role: 'pwr', tauOff: 0.5 },
+  { id: 'a33', name: '3.3V AUX', nom: 3.3, role: 'aux', tauOff: 1 },
+  { id: 'a18', name: '1.8V AUX', nom: 1.8, role: 'aux', tauOff: 1 },
+  { id: 'm33', name: 'MAIN 3.3V', nom: 3.3, role: 'main', tauOff: 0.35 },
+  { id: 'm5', name: '5V', nom: 5, role: 'main', tauOff: 0.35 },
+  { id: 'core', name: 'CPU CORE', nom: 1.0, role: 'main', tauOff: 0.05 },
+  { id: 'pd', name: 'USB-C CONTROLLER RAIL', nom: 3.3, role: 'aux', tauOff: 2 },
+  { id: 'mux', name: 'MUX / RETIMER RAIL', nom: 1.8, role: 'io', tauOff: 0.3 }
+];
+const SIM_WINDOW = 60;   // seconds of sim time visible
+const SIM_RET = 1.2;     // illustrative retention threshold for the controller rail (V)
+
+class RailSim {
+  constructor(root) {
+    this.root = root;
+    this.svg = root.querySelector('.sim-svg');
+    this.log = root.querySelector('.sim-log');
+    this.status = root.querySelector('.sim-status');
+    this.speed = 6;
+    this.build();
+    this.reset();
+    this.last = performance.now();
+    const loop = now => { this.tick(Math.min(0.1, (now - this.last) / 1000)); this.last = now; this.raf = requestAnimationFrame(loop); };
+    this.raf = requestAnimationFrame(loop);
+  }
+  reset() {
+    this.t = 0; this.events = []; this.marks = [];
+    this.ac = this.root.querySelector('#sim-ac').checked;
+    this.sys = 'S0'; this.ctrl = 'stuck'; this.holding = null; this.busy = false;
+    this.on = { vbus: this.ac, vbat: true, vsys: true, a33: true, a18: true, m33: true, m5: true, core: true, pd: true, mux: true };
+    this.v = {}; SIM_RAILS.forEach(r => this.v[r.id] = this.on[r.id] ? r.nom : 0);
+    this.hist = SIM_RAILS.map(() => []);
+    this.log.innerHTML = '';
+    this.note('Incident state: running (S0), dock attached, controller state STUCK.', 'fail');
+    this.render();
+  }
+  get tauPd() { return parseFloat(this.root.querySelector('#sim-tau').value); }
+  get deep() { return parseFloat(this.root.querySelector('#sim-deep').value); }
+  note(msg, cls = '') {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="sim-t">t=${this.t.toFixed(1)} s</span> <span class="${cls}">${msg}</span>`;
+    this.log.prepend(li);
+    while (this.log.children.length > 14) this.log.lastChild.remove();
+  }
+  at(dt, fn) { this.events.push({ t: this.t + dt, fn }); }
+  mark(label, color) { this.marks.push({ t: this.t, label, color }); }
+  railsOff(ids) { ids.forEach(i => this.on[i] = false); }
+  railsOn(ids) { ids.forEach(i => this.on[i] = true); }
+
+  /* ---------- actions ---------- */
+  act(a) {
+    if (this.holding && a.startsWith('hold')) return;
+    const n = { 'restart': () => this.restart(), 'shutdown': () => this.shutdown(), 'ac': () => this.toggleAc(), 'on': () => this.powerOn(), 'cold': () => this.coldBoot() }[a];
+    if (n) return n();
+    if (a.startsWith('hold')) this.hold(parseFloat(a.slice(4)));
+  }
+  restart() {
+    if (this.sys !== 'S0') return this.note('Restart needs a running system. Press SYSTEM ON first.', 'warn');
+    this.mark('RESTART', P.main); this.note('Windows restart: OS shuts down, CPU gets a warm reset.');
+    this.at(0.8, () => { this.on.core = false; this.note('CPU core reset (warm). Main + AUX rails stay up.'); });
+    this.at(1.3, () => { this.on.core = true; });
+    this.at(3.5, () => this.note(this.ctrl === 'stuck' ? 'Windows reloaded. Controller rail never dropped → state still STUCK.' : 'Windows reloaded.', this.ctrl === 'stuck' ? 'fail' : 'ok'));
+  }
+  shutdown() {
+    if (this.sys !== 'S0') return this.note('Already off.', 'warn');
+    this.mark('SHUTDOWN', P.main); this.note('Windows shutdown → S5.');
+    this.at(0.6, () => { this.railsOff(['core']); });
+    this.at(0.9, () => { this.railsOff(['m5', 'm33', 'mux']); this.sys = 'S5'; this.note('Main + I/O rails off. AUX stays on.' + (this.ac ? ' The PD controller stays powered to keep charging.' : ''), 'aux'); });
+  }
+  toggleAc() {
+    this.ac = !this.ac; this.root.querySelector('#sim-ac').checked = this.ac;
+    this.on.vbus = this.ac; this.mark(this.ac ? 'DOCK IN' : 'DOCK OUT', P.pwr);
+    this.note(this.ac ? 'Dock plugged in: CC attach → PD contract → VBUS.' : 'Dock unplugged: VBUS collapses, battery takes over. Controller rail stays on battery AUX.', 'aux');
+    if (!this.ac && this.ctrl === 'stuck') this.note('A healthy controller resets its state on detach; a wedged one may not — reseating alone is not guaranteed.', 'warn');
+  }
+  powerOn() {
+    if (this.sys === 'S0') return this.note('Already running.', 'warn');
+    this.mark('POWER ON', P.pwr); this.note('Power on: EC sequences the main rails.');
+    this.sys = 'BOOT';
+    this.at(0.2, () => this.railsOn(['m5'])); this.at(0.4, () => this.railsOn(['m33'])); this.at(0.7, () => this.railsOn(['core'])); this.at(0.9, () => this.railsOn(['mux']));
+    this.at(1.2, () => {
+      this.sys = 'S0';
+      if (this.ctrl === 'stuck') { this.note('Booted — but the controller kept its old state: no USB connection reported, dock absent, displays missing.', 'fail'); return; }
+      this.negotiate();
+    });
+  }
+  coldBoot() {
+    if (this.sys === 'S0') {
+      this.note('Cold boot = full shutdown, then power on.');
+      this.shutdown(); this.at(3, () => this.powerOn()); return;
+    }
+    this.powerOn();
+  }
+  negotiate() {
+    if (!this.on.pd) return;
+    this.ctrl = 'neg';
+    const steps = [[0.2, 'CC attach detected'], [0.6, 'PD contract: Source_Caps → Request → Accept → PS_RDY'], [0.8, 'USB connection / data role reported to host'], [1.0, 'DP Alt Mode entered'], [1.3, 'Mux routes lanes'], [1.8, 'USB hub enumerates'], [2.2, 'DP link trains'], [2.8, 'Windows enumerates devices']];
+    steps.forEach(([d, m], i) => this.at(d, () => { this.note(m, 'ok'); if (i === steps.length - 1) { this.ctrl = 'ok'; this.mark('ALL UP', P.pwr); } }));
+  }
+  hold(sec) {
+    const start = this.t; const deep = this.deep; const wasOn = this.sys === 'S0';
+    this.holding = { start, sec }; this.mark(`HOLD ${sec}s`, P.warn);
+    this.note(`Power button held for ${sec} s. EC starts counting.`, 'warn');
+    if (wasOn || this.sys === 'BOOT') this.at(4, () => { this.mark('FORCED OFF', P.main); this.railsOff(['core', 'm5', 'm33', 'mux']); this.sys = 'S5'; this.note('> 4 s: power-button override → forced off (S5). Controller rail still up.', 'aux'); });
+    if (sec >= deep) this.at(deep, () => {
+      this.mark('DEEP RESET', P.fail); this.railsOff(['pd', 'mux']);
+      this.note(`${deep} s: platform deep-reset threshold — EC drops the Type-C controller domain. Rail decays (τ = ${this.tauPd} s).`, 'fail');
+    }); else this.note(`This hold ends before the ${deep} s deep-reset threshold in this model.`, 'warn');
+    this.at(sec, () => {
+      this.mark('RELEASE', P.silk); this.holding = null;
+      if (!this.on.pd) {
+        if (this.ctrl === 'cleared') this.note(`Released. Rail spent ${(sec - deep).toFixed(0)} s off — below retention → volatile state gone.`, 'ok');
+        else this.note(`Released after only ${(sec - deep).toFixed(1)} s off — rail never fell below ${SIM_RET} V. State may survive.`, 'fail');
+        this.at(0.3, () => { this.on.pd = true; if (this.ac && this.ctrl === 'cleared') this.at(0.3, () => this.note('Controller restarts cold: CC → PD contract → charging resumes.', 'ok')); });
+      } else this.note('Released. Controller rail never dropped — state ' + (this.ctrl === 'stuck' ? 'STUCK.' : 'unchanged.'), this.ctrl === 'stuck' ? 'fail' : '');
+      this.note('System is off. Press SYSTEM ON or COLD BOOT.');
+    });
+  }
+
+  /* ---------- simulation ---------- */
+  tick(dtReal) {
+    const dt = dtReal * this.speed; this.t += dt;
+    this.events.sort((a, b) => a.t - b.t);
+    while (this.events.length && this.events[0].t <= this.t) this.events.shift().fn();
+    SIM_RAILS.forEach(r => {
+      let target = this.on[r.id];
+      if (r.id === 'vbus') target = this.ac;
+      if (r.id === 'vsys') target = true;
+      const nom = r.id === 'vsys' ? (this.ac && this.on.pd ? 12.6 : 12.3) : r.nom;
+      const tau = r.id === 'pd' ? this.tauPd : r.tauOff;
+      this.v[r.id] = target ? nom - (nom - this.v[r.id]) * Math.exp(-dt / 0.08) : this.v[r.id] * Math.exp(-dt / tau);
+    });
+    if (!this.on.pd && this.v.pd < SIM_RET && this.ctrl !== 'cleared') { this.ctrl = 'cleared'; this.mark('STATE LOST', P.off); this.note(`Controller rail < ${SIM_RET} V: volatile state no longer retained.`, 'ok'); }
+    this.hist.forEach((h, i) => { h.push([this.t, this.v[SIM_RAILS[i].id]]); while (h.length && h[0][0] < this.t - SIM_WINDOW - 1) h.shift(); });
+    this.marks = this.marks.filter(m => m.t > this.t - SIM_WINDOW);
+    this.render();
+  }
+  build() {
+    let s = '';
+    SIM_RAILS.forEach((r, i) => {
+      const y = 22 + i * 52;
+      s += `<rect x="200" y="${y - 4}" width="860" height="44" fill="${i % 2 ? '#081310' : '#0a1712'}"/>`;
+      s += T(14, y + 16, r.name, 'tw', 'style="font-size:12px"') + T(14, y + 32, `nominal ${r.nom} V`, 'ts c-mute');
+      s += `<path class="sim-line" data-i="${i}" d="" fill="none" stroke-width="2.2" stroke-linejoin="round"/>`;
+      s += `<text class="t sim-val" data-i="${i}" x="1188" y="${y + 24}" text-anchor="end" style="font-size:15px;font-weight:700"></text>`;
+    });
+    s += `<path d="M200,${22 + 10 * 52} H1060" stroke="#2c4a3a"/>`;
+    for (let k = 0; k <= 6; k++) s += T(200 + k * 860 / 6, 22 + 10 * 52 + 18, k === 6 ? 'now' : `−${SIM_WINDOW - k * 10} s`, 'mid ts c-mute');
+    s += `<g class="sim-marks"></g>`;
+    this.svg.innerHTML = s;
+    this.lines = [...this.svg.querySelectorAll('.sim-line')];
+    this.vals = [...this.svg.querySelectorAll('.sim-val')];
+    this.marksG = this.svg.querySelector('.sim-marks');
+  }
+  render() {
+    const X = t => 200 + (t - (this.t - SIM_WINDOW)) / SIM_WINDOW * 860;
+    SIM_RAILS.forEach((r, i) => {
+      const y = 22 + i * 52, h = 36, max = r.nom * 1.08;
+      const pts = this.hist[i] || [];
+      const d = pts.length ? 'M' + pts.map(([t, v]) => `${Math.max(200, X(t)).toFixed(1)},${(y + h - Math.min(v, max) / max * h).toFixed(1)}`).join(' L') : '';
+      const v = this.v[r.id] || 0, live = v > r.nom * 0.25;
+      const c = r.id === 'pd' && this.ctrl === 'stuck' && live ? P.fail : live ? ROLE[r.role] : P.off;
+      this.lines[i].setAttribute('d', d); this.lines[i].setAttribute('stroke', c);
+      this.vals[i].textContent = v.toFixed(v < 10 ? 2 : 1) + ' V'; this.vals[i].style.fill = c;
+    });
+    this.marksG.innerHTML = this.marks.map(m => `<path d="M${X(m.t).toFixed(1)},14 V${22 + 10 * 52}" stroke="${m.color}" stroke-width="1.4" stroke-dasharray="4 3"/><text class="t" x="${(X(m.t) + 4).toFixed(1)}" y="12" style="font-size:9.5px;font-weight:700;fill:${m.color}">${m.label}</text>`).join('');
+    // status panel
+    const ch = this.ac ? (this.on.pd && this.v.pd > 2 ? true : 'warn') : 'off';
+    const io = this.sys !== 'S0' ? 'off' : this.ctrl === 'ok' ? true : this.ctrl === 'stuck' ? false : 'warn';
+    const ctrlTxt = { stuck: ['STUCK', 'fail'], cleared: ['CLEARED · cold', 'off'], neg: ['NEGOTIATING', 'warn'], ok: ['NEGOTIATED', 'pwr'] }[this.ctrl];
+    const key = [this.sys, ch, io, this.ctrl, !!this.holding, this.holding ? Math.floor(this.t - this.holding.start) : 0].join('|');
+    if (key === this.lastKey) return; this.lastKey = key;
+    const pill = (ok, label) => `<span class="pill ${ok === true ? 'ok' : ok === 'off' ? 'off' : ok === 'warn' ? 'warn' : 'bad'}">${label} ${ok === true ? '✓' : ok === 'off' ? '–' : ok === 'warn' ? '…' : '✕'}</span>`;
+    this.status.innerHTML = `<div class="sim-chip"><b>SYSTEM</b><span>${this.sys === 'S0' ? 'RUNNING · S0' : this.sys === 'BOOT' ? 'BOOTING' : 'OFF · S5'}</span></div>` +
+      `<div class="sim-chip ${ctrlTxt[1]}"><b>PD CONNECTION STATE</b><span>${ctrlTxt[0]}</span></div>` +
+      `<div class="sim-chip"><b>POWER BUTTON</b><span>${this.holding ? `HELD ${Math.floor(this.t - this.holding.start)} / ${this.holding.sec} s` : 'released'}</span></div>` +
+      `<div class="sim-pills">${pill(ch, 'CHARGING')}${pill(io, 'USB')}${pill(io, 'DISPLAY')}</div>`;
+  }
+}
+
+/* ===== master.js ===== */
+/* master.js — the single combined poster (2400 × 2860) built from the figure renderers */
+
+function nest(svgStr, x, y, w) {
+  const m = svgStr.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
+  const h = w * (+m[2] / +m[1]);
+  return { s: svgStr.replace('<svg ', `<svg x="${x}" y="${y}" width="${w}" height="${h.toFixed(1)}" `).replace('class="fig-svg ', 'class="nested '), h };
+}
+function masterSVG(standalone = false) {
+  const W = 2400;
+  let s = `<rect width="${W}" height="2860" fill="${P.bg}"/><rect width="${W}" height="2860" fill="url(#pcbTex)" opacity=".35"/>`;
+  // header
+  s += `<rect x="0" y="0" width="${W}" height="230" fill="#07140d"/><path d="M0,230 H${W}" stroke="${P.maskLine}" stroke-width="2"/>`;
+  s += T(60, 58, 'ENGINEERING TRAINING MODULE · USB-C / PLATFORM POWER · REV A', 'tm tw c-dim');
+  s += TH(60, 128, 'USB-C DOCK FAILURE EXPLAINED', '', 'style="font-size:76px"');
+  s += T(62, 172, 'HP USB-C Dock G5 → Windows business laptop · charging kept working · USB, Ethernet, displays gone — dock absent from Device Manager · restart did not help · ≈45 s hold fixed it', 'tm c-dim');
+  s += T(62, 202, 'Representative architecture — exact implementation varies by model. The successful reset does not prove which controller failed.', 'tm', `style="fill:${P.aux}"`);
+  s += `<g transform="translate(1690,52) scale(1.25)">` + statusPill(0, 0, 'pwr', true, 'CHARGING', 200) + statusPill(0, 42, 'usb', false, 'USB · LAN', 200) + statusPill(0, 84, 'dp', false, 'DISPLAYS', 200) + `</g>`;
+  s += TH(2004, 128, '→', 'mid', 'style="font-size:54px"') + T(2004, 160, '45 s hold', 'mid tm tw c-aux');
+  s += `<g transform="translate(2090,52) scale(1.25)">` + statusPill(0, 0, 'pwr', true, '', 230 / 1.25 - 10) + statusPill(0, 42, 'usb', true, '', 230 / 1.25 - 10) + statusPill(0, 84, 'dp', true, '', 230 / 1.25 - 10) + `</g>`;
+
+  const frame = (x, y, w, h, n, title) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="14" fill="#08130e" stroke="${P.line}" stroke-width="2"/>` +
+    `<rect x="${x}" y="${y}" width="${w}" height="52" rx="14" fill="#0c1d15"/><rect x="${x}" y="${y + 38}" width="${w}" height="14" fill="#0c1d15"/>` +
+    T(x + 24, y + 34, n, 'tm tw c-aux') + TH(x + 80, y + 36, title, '', 'style="font-size:26px"');
+  const col = [40, 1220], cw = 1140;
+  let y = 260;
+  // row 1
+  let a = nest(boardSVG('failure', { flow: false }), col[0] + 10, y + 56, cw - 20), b = nest(fig02(), col[1] + 10, y + 56, cw - 20);
+  let rh = Math.max(a.h, b.h) + 76;
+  s += frame(col[0], y, cw, rh, '01', 'PCB MOTHERBOARD · WHERE THE STATE LIVES') + a.s + frame(col[1], y, cw, rh, '02', 'USB-C SIGNAL PATH · ONE CONNECTOR, THREE JOBS') + b.s;
+  s += `<g transform="translate(${col[1] + 40},${y + 56 + b.h + 8})">` + TL(0, 0, 'Power finished early and stayed up. Not even USB 2.0 enumerated, so the stuck step sits\nbefore data AND display: the USB connection / data-role state the PD controller reports.', 26, 'tm', 'style="fill:#cfdcd2"') + `</g>`;
+  y += rh + 30;
+  // row 2
+  a = nest(fig10(1.2, 1, true), col[0] + 10, y + 70, cw - 20); b = nest(fig06(), col[1] + 10, y + 56, cw - 20);
+  rh = Math.max(a.h + 90, b.h + 70);
+  s += frame(col[0], y, cw, rh, '03', 'VOLTAGE DECAY · WHEN STATE IS ACTUALLY LOST') + a.s + frame(col[1], y, cw, rh, '04', 'WARM VS HARDWARE RESET') + b.s;
+  s += T(col[0] + 40, y + 56 + a.h + 50, 'V(t) = V₀·e^(−t/RC) · state survives until the rail crosses the retention threshold', 'tm c-dim');
+  y += rh + 30;
+  // row 3
+  a = nest(fig14(true), col[0] + 10, y + 56, cw - 20); b = nest(fig04(), col[1] + 10, y + 56, cw - 20);
+  rh = Math.max(a.h, b.h) + 110;
+  s += frame(col[0], y, cw, rh, '05', 'RESET TIMELINE · IS 45 s SPECIAL?') + a.s + frame(col[1], y, cw, rh, '06', 'USB-C REINITIALISATION · CC → PD → ALT → USB → OS') + b.s;
+  s += T(col[0] + 40, y + rh - 26, 'No verified procedure needs 45 s; all documented thresholds are ≤ 40 s. 45 s = margin, not magic.', 'tm tw c-pwr');
+  s += T(col[1] + 40, y + rh - 26, 'After a clean reset, the chain re-runs from stage 1 and every function returns.', 'tm tw c-pwr');
+  y += rh + 30;
+  // row 4
+  b = nest(fig16h(), 50, y + 66, W - 100);
+  rh = b.h + 90;
+  s += frame(40, y, W - 80, rh, '07', 'DIAGNOSTIC DECISION PATH · THIS INCIDENT') + b.s;
+  y += rh + 24;
+  s += T(60, y + 10, 'Sources: ACPI 6.5 §4.8.2.2.1.3 · HP Support “Perform a power reset” · HP USB-C Dock G5 datasheet + SoftPaq firmware notes · Dell KB 000139016, 000125880 · Lenovo HT510479 · Microsoft Support 4036280', 'ts c-mute');
+  const H = y + 40;
+  let out = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" ${standalone ? `width="${W}" height="${H}"` : ''} class="fig-svg master static" role="img" aria-label="USB-C dock failure master infographic">`;
+  if (standalone) out += `<style>@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap');${SVG_CSS}*{animation:none!important}</style><defs>${SVG_DEFS}</defs>`;
+  return out + s.replace(`<rect width="${W}" height="2860"`, `<rect width="${W}" height="${H}"`).replace(`<rect width="${W}" height="2860"`, `<rect width="${W}" height="${H}"`) + `</svg>`;
+}
+
+/* ===== app.js ===== */
+/* app.js — mounts every figure and wires the interactions */
+(function () {
+  // shared stylesheet + defs
+  const st = document.createElement('style'); st.textContent = SVG_CSS + '.static *{animation:none!important}'; document.head.appendChild(st);
+  const host = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  host.setAttribute('width', '0'); host.setAttribute('height', '0'); host.setAttribute('aria-hidden', 'true');
+  host.style.position = 'absolute'; host.innerHTML = `<defs>${SVG_DEFS}</defs>`; document.body.prepend(host);
+
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const mount = (id, svg) => { const el = $(`[data-fig="${id}"]`); if (el) el.innerHTML = svg; return el; };
+
+  const R = {
+    f01: () => boardSVG('failure'), f02: fig02, f03: fig03, f04: fig04, f05: fig05, f06: fig06, f07: fig07, f08: fig08, f09: fig09,
+    f13: fig13, f14: () => fig14(false), f15: fig15, f17: fig17, f18: fig18, master: () => masterSVG(false)
+  };
+  Object.entries(R).forEach(([k, fn]) => { try { mount(k, fn()); } catch (e) { console.error(k, e); } });
+
+  /* ---- FIG 04 play ---- */
+  $('[data-play="f04"]').addEventListener('click', () => {
+    const el = $('[data-fig="f04"]');
+    const nodes = $$('.seq-node', el), links = $$('.seq-link', el);
+    [...nodes, ...links].forEach(n => { n.style.transition = 'opacity .35s'; n.style.opacity = '.12'; });
+    nodes.forEach((n, i) => setTimeout(() => {
+      n.style.opacity = '1'; const l = links.find(x => +x.dataset.step === i); if (l) l.style.opacity = '1';
+    }, 300 + i * 550));
+  });
+
+  /* ---- FIG 10 decay ---- */
+  const tauSel = $('#tau');
+  TAU_PRESETS.forEach(([l, , ex], i) => tauSel.insertAdjacentHTML('beforeend', `<option value="${i}" ${i === 1 ? 'selected' : ''}>${l} · ${ex}</option>`));
+  const drawDecay = () => {
+    const v = +$('#vth').value; $('#vth-out').textContent = v.toFixed(2) + ' V';
+    const el = mount('f10', fig10(v, +tauSel.value));
+    const svg = $('svg', el), hit = $('.xh-hit', svg), xh = $('.xhair', svg);
+    const move = ev => {
+      const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+      const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+      const t = DECAY.tMin + (p.x - DECAY.x0) / (DECAY.x1 - DECAY.x0) * (DECAY.tMax - DECAY.tMin);
+      const V = t < 0 ? DECAY.V0 : DECAY.V0 * Math.exp(-t);
+      const x = dx(t), y = dy(V); xh.style.display = '';
+      $('path', xh).setAttribute('d', `M${x},${DECAY.y1} V${DECAY.y0}`);
+      const c = $('circle', xh); c.setAttribute('cx', x); c.setAttribute('cy', y);
+      const flip = x > 900 ? -144 : 0;
+      $('.xh-bg', xh).setAttribute('x', x + 8 + flip); $('.xh-bg', xh).setAttribute('y', y - 30);
+      const tt = $('.xh-t', xh), tv = $('.xh-v', xh);
+      tt.setAttribute('x', x + 16 + flip); tt.setAttribute('y', y - 14); tv.setAttribute('x', x + 16 + flip); tv.setAttribute('y', y + 2);
+      const tau = TAU_PRESETS[+tauSel.value][1];
+      tt.textContent = `t = ${t.toFixed(2)}τ (${t < 0 ? '−' : ''}${fmtTime(Math.abs(t) * tau)})`;
+      tv.textContent = `V = ${V.toFixed(2)} V ${V < v ? '· state lost' : '· retained'}`;
+    };
+    hit.addEventListener('pointermove', move); hit.addEventListener('pointerleave', () => xh.style.display = 'none');
+  };
+  $('#vth').addEventListener('input', drawDecay); tauSel.addEventListener('change', drawDecay); drawDecay();
+
+  /* ---- FIG 11 / 12 toggles ---- */
+  const segs = (sel, attr, fn) => $$(sel).forEach(b => b.addEventListener('click', () => { $$(sel).forEach(x => x.classList.toggle('on', x === b)); fn(b.dataset[attr]); }));
+  mount('f11', fig11(false)); segs('[data-reg]', 'reg', v => mount('f11', fig11(v === 'on')));
+  mount('f12', fig12(true)); segs('[data-dom]', 'dom', v => mount('f12', fig12(v === 'off')));
+
+  /* ---- FIG 16 decision tree ---- */
+  let ans = Object.assign({}, TREE_INCIDENT), tsel = null;
+  const treeInfo = id => {
+    const box = $('#tree-info');
+    if (TREE[id]) { box.innerHTML = `<div class="sub">QUESTION</div><h4>${TREE[id].q}</h4><p>Current answer: <b>${ans[id].toUpperCase()}</b>. Click the node again to flip it.</p>`; return; }
+    const L = TREE_LEAF[id];
+    if (!L) { box.innerHTML = `<div class="sub">START</div><h4>Dock connected</h4><p>Follow the lit path. The defaults are your incident’s answers.</p>`; return; }
+    box.innerHTML = `<div class="sub">OUTCOME</div><h4>${L[0]}</h4><p>${L[1]}</p>`;
+  };
+  const drawTree = () => {
+    const el = mount('f16', fig16(ans, tsel));
+    $$('.tnode', el).forEach(n => {
+      const go = () => { const id = n.dataset.node; if (TREE[id]) ans[id] = ans[id] === 'yes' ? 'no' : 'yes'; tsel = id; drawTree(); treeInfo(id); };
+      n.addEventListener('click', go); n.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+    });
+  };
+  $('.reset-tree').addEventListener('click', () => { ans = Object.assign({}, TREE_INCIDENT); tsel = 'G'; drawTree(); treeInfo('G'); });
+  tsel = 'G'; drawTree(); treeInfo('G');
+
+  /* ---- FIG 19 interactive board ---- */
+  let bmode = 'failure', bsel = 'pd';
+  const resetChip = { 'YES': 'pwr', 'LIKELY': 'pwr', 'POSSIBLY': 'warn', 'MAYBE': 'warn', 'TRIGGER ONLY': 'warn' };
+  const partInfo = id => {
+    const I = PART_INFO[id], name = BOARD_PARTS[id].name;
+    const ms = (BOARD_MODES[bmode].comp[id] || 'on');
+    const stLbl = { ok: ['HEALTHY', 'pwr'], fail: ['STUCK', 'fail'], warn: ['RESETTING', 'warn'], off: ['UNPOWERED', 'off'], live: ['ALIVE · AUX', 'aux'], on: ['POWERED', 'main'] }[ms];
+    $('#part-info').innerHTML = `<div class="sub">COMPONENT · ${BOARD_MODES[bmode].label}</div><h4>${name}</h4>
+      <div class="chipline" style="margin-bottom:10px"><span class="chip ${stLbl[1]}">${stLbl[0]}</span></div>
+      <dl><div><dt>WHAT IT DOES</dt><dd>${I.does}</dd></div>
+      <div><dt>VOLTAGE DOMAIN</dt><dd class="chipline">${I.domain.map(d => `<span class="chip aux">${d}</span>`).join('')}</dd></div>
+      <div><dt>POWERED DURING SHUTDOWN?</dt><dd><span class="chip ${I.shut[1] || 'off'}">${I.shut[0]}</span></dd></div>
+      <div><dt>IF IT GETS STUCK</dt><dd>${I.stuck}</dd></div>
+      <div><dt>CLEARED BY A HARD POWER RESET?</dt><dd><span class="chip ${I.reset[1]}">${I.reset[0]}</span>${I.resetNote ? `<br>${I.resetNote}` : ''}</dd></div></dl>`;
+  };
+  const drawBoard = () => {
+    const el = mount('f19', boardSVG(bmode, { interactive: true }));
+    $('#mode-note').textContent = `${BOARD_MODES[bmode].label}: ${BOARD_MODES[bmode].note}`;
+    $$('.hit', el).forEach(g => {
+      const go = () => { bsel = g.dataset.id; partInfo(bsel); $$('.hit .ring', el).forEach(r => r.removeAttribute('data-sel')); };
+      g.addEventListener('click', go); g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+    });
+    partInfo(bsel);
+  };
+  segs('[data-mode]', 'mode', m => { bmode = m; drawBoard(); });
+  drawBoard();
+
+  /* ---- FIG 20 simulator ---- */
+  const sim = new RailSim($('#sim'));
+  $$('[data-act]').forEach(b => b.addEventListener('click', () => b.dataset.act === 'reset' ? sim.reset() : sim.act(b.dataset.act)));
+  $('#sim-ac').addEventListener('change', e => { if (e.target.checked !== sim.ac) sim.toggleAc(); });
+  $('#sim-deep').addEventListener('input', e => $('#sim-deep-out').textContent = e.target.value + ' s');
+  $('#sim-speed').addEventListener('change', e => sim.speed = +e.target.value);
+
+  /* ---- FIG 21 hypotheses ---- */
+  let hsel = 'pd';
+  const hypoInfo = id => {
+    const h = HYPO.find(x => x.id === id), cls = { pwr: 'pwr', aux: 'aux', fail: 'fail', off: 'off' }[h.v];
+    $('#hypo-info').innerHTML = `<div class="sub">HYPOTHESIS</div><h4>${h.name}</h4><div class="chipline" style="margin-bottom:10px"><span class="chip ${cls}">${h.verdict}</span></div>
+      <dl><div><dt>EVIDENCE FOR</dt><dd><ul>${h.for.map(x => `<li>${x}</li>`).join('')}</ul></dd></div><div><dt>EVIDENCE AGAINST / GAPS</dt><dd><ul>${h.against.map(x => `<li>${x}</li>`).join('')}</ul></dd></div></dl>`;
+  };
+  const drawHypo = () => {
+    const el = mount('f21', fig21(hsel));
+    $$('.hnode', el).forEach(n => {
+      const go = () => { hsel = n.dataset.h; drawHypo(); hypoInfo(hsel); };
+      n.addEventListener('click', go); n.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+    });
+  };
+  drawHypo(); hypoInfo(hsel);
+
+  /* ---- FIG 22 myth cards ---- */
+  const MYTHS = [
+    ['“Static electricity was trapped.”', 'More likely a controller, power-state or negotiation issue.', 'Charge on rails is ordinary capacitor energy that drains in ms–s. The fix pattern points to volatile controller state.'],
+    ['“The power button drains the motherboard.”', 'The button sends a logic signal to the EC / power sequencer.', 'Current through it is set by a pull-up resistor, e.g. 3.3 V ÷ 100 kΩ ≈ 33 µA. Rails drain through loads and bleeders.'],
+    ['“45 seconds clears CMOS.”', 'Not generally.', 'Dell’s documented RTC reset is 25–40 s with AC connected, and holding > 40 s aborts it. Other OEMs use jumpers, key combos or setup menus.'],
+    ['“The EC carries USB data.”', 'USB data travels through USB controllers, PHYs and the mux path.', 'The EC manages power, battery, keyboard and often configures the PD controller over I²C, but it does not carry USB data.'],
+    ['“If charging works, USB-C is completely healthy.”', 'Power, USB data and DisplayPort can fail independently.', 'The PD contract finishes before Alt Mode. Charging only proves stages 1–5 of the bring-up.']
+  ];
+  $('#cards').innerHTML = MYTHS.map(([m, r, d], i) => `<button class="card" type="button" aria-pressed="false" aria-label="Myth ${i + 1}: ${m.replace(/"/g, '')} — flip for reality"><div class="card-in"><div class="face front"><span class="lbl">MYTH ${i + 1}</span><q>${m.replace(/[“”]/g, '')}</q><small>click to flip →</small></div><div class="face back"><span class="lbl">REALITY</span><p>${r}</p><small>${d}</small></div></div></button>`).join('');
+  $$('.card').forEach(c => c.addEventListener('click', () => { c.classList.toggle('flipped'); c.setAttribute('aria-pressed', c.classList.contains('flipped')); }));
+
+  /* ---- copy SVG ---- */
+  $$('[data-copy]').forEach(b => b.addEventListener('click', async () => {
+    const id = b.dataset.copy; const svg = id === 'master' ? masterSVG(true) : standalone($(`[data-fig="${id}"] svg`).outerHTML);
+    try { await navigator.clipboard.writeText(svg); b.textContent = 'Copied'; } catch (e) { b.textContent = 'Copy blocked'; }
+    setTimeout(() => b.textContent = 'Copy SVG', 1600);
+  }));
+  function standalone(svg) {
+    return svg.replace(/<svg /, `<svg width="1200" `).replace(/(<svg[^>]*>)/, `$1<style>@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap');${SVG_CSS}</style><defs>${SVG_DEFS}</defs><rect width="100%" height="100%" fill="${P.bg}"/>`);
+  }
+  window.__standalone = standalone;
+
+  /* ---- tooltips for [data-tip] ---- */
+  const tip = $('#tooltip');
+  document.addEventListener('pointermove', e => {
+    const t = e.target.closest && e.target.closest('[data-tip]');
+    if (!t) { tip.hidden = true; return; }
+    tip.textContent = t.dataset.tip; tip.hidden = false;
+    tip.style.left = Math.min(e.clientX + 14, innerWidth - 330) + 'px'; tip.style.top = (e.clientY + 16) + 'px';
+  });
+
+  /* ---- toc active state ---- */
+  const links = $$('.toc a');
+  const io = new IntersectionObserver(es => es.forEach(en => { if (en.isIntersecting) links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + en.target.id)); }), { rootMargin: '-30% 0px -60% 0px' });
+  $$('.fig').forEach(f => io.observe(f));
+})();
+
+</script>
+</body>
+</html>

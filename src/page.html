@@ -1,0 +1,253 @@
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">ENGINEERING TRAINING MODULE · USB-C / PLATFORM POWER · REV A</div>
+    <h1>USB-C Dock Failure, <span>Explained</span></h1>
+    <p class="lede">HP USB-C Dock G5 on a Windows business laptop. Charging kept working, but USB, Ethernet and displays vanished, and the dock didn’t appear in Device Manager at all. A restart didn’t help. Holding the power button for about 45 seconds brought everything back.</p>
+    <div class="incident" aria-label="Incident summary">
+      <div class="inc-col">
+        <div class="inc-label">BEFORE</div>
+        <span class="pill ok">CHARGING ✓</span><span class="pill bad">USB · LAN ✕</span><span class="pill bad">DISPLAYS ✕</span><span class="pill bad">DOCK NOT IN DEVICE MANAGER</span>
+      </div>
+      <div class="inc-arrow"><span>RESTART</span><b class="bad-t">no change</b><span>HOLD POWER ≈ 45 s</span><b class="ok-t">fixed</b></div>
+      <div class="inc-col">
+        <div class="inc-label">AFTER</div>
+        <span class="pill ok">CHARGING ✓</span><span class="pill ok">USB · LAN ✓</span><span class="pill ok">DISPLAYS ✓</span>
+      </div>
+    </div>
+    <p class="caveat">Representative architecture, not one specific laptop. The reset narrows the suspects. It does not prove which controller failed.</p>
+    <div class="legend" aria-label="Colour code">
+      <span><i style="background:var(--pwr)"></i>power / working</span>
+      <span><i style="background:var(--aux)"></i>auxiliary / always-on</span>
+      <span><i style="background:var(--main)"></i>main system rails</span>
+      <span><i style="background:var(--io)"></i>USB-C / high-speed data</span>
+      <span><i style="background:var(--fail)"></i>failure / stuck</span>
+      <span><i style="background:var(--off)"></i>powered down</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout wrap">
+  <nav class="toc" aria-label="Figures">
+    <div class="toc-h">A · HARDWARE</div>
+    <a href="#f01">01 Motherboard</a><a href="#f02">02 USB-C cutaway</a><a href="#f03">03 Dock cutaway</a>
+    <div class="toc-h">B · INCIDENT</div>
+    <a href="#f04">04 Normal sequence</a><a href="#f05">05 Failure state</a>
+    <div class="toc-h">C · THE RESET</div>
+    <a href="#f06">06 Restart vs reset</a><a href="#f07">07 Power tree</a><a href="#f08">08 Off ≠ 0 V</a><a href="#f09">09 Power button</a><a href="#f10">10 Voltage decay</a><a href="#f11">11 Discharge path</a><a href="#f12">12 Volatile state</a><a href="#f13">13 Reset depth</a><a href="#f14">14 OEM timeline</a><a href="#f15">15 Why 45 s</a>
+    <div class="toc-h">D · DIAGNOSE</div>
+    <a href="#f16">16 Decision tree</a><a href="#f17">17 Before / after</a>
+    <div class="toc-h">E · EXPLORE</div>
+    <a href="#f18">18 Exploded view</a><a href="#f19">19 Interactive board</a><a href="#f20">20 Rail simulator</a>
+    <div class="toc-h">F · CONCLUSIONS</div>
+    <a href="#f21">21 Hypotheses</a><a href="#f22">22 Myths</a><a href="#master">★ Master poster</a>
+  </nav>
+
+  <main>
+    <h2 class="part">A · The hardware</h2>
+
+    <section class="fig" id="f01">
+      <div class="fig-head"><span class="fig-no">FIG 01</span><h3>Master PCB motherboard</h3><span class="kind">SVG · incident state</span><button class="copy" data-copy="f01" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f01"></div>
+      <p class="cap">Power enters at J1, becomes VSYS, then splits into always-on (yellow) and main (blue) rails. The red parts are the PD controller, mux and retimer, which sit on the path shared by USB and DisplayPort. The power button is only a dashed logic line to the EC.</p>
+    </section>
+
+    <section class="fig" id="f02">
+      <div class="fig-head"><span class="fig-no">FIG 02</span><h3>USB-C connector cutaway</h3><span class="kind">SVG</span><button class="copy" data-copy="f02" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f02"></div>
+      <p class="cap">USB-C Type-C receptacle pinout (A1–A12 / B12–B1). The four SuperSpeed pairs are shared: the mux gives them to USB 3 or to DisplayPort.</p>
+    </section>
+
+    <section class="fig" id="f03">
+      <div class="fig-head"><span class="fig-no">FIG 03</span><h3>HP USB-C Dock G5 cutaway</h3><span class="kind">SVG · verified vs representative</span><button class="copy" data-copy="f03" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f03"></div>
+      <p class="cap">Ports, power levels and the three firmware-updatable controllers come from HP’s datasheet and SoftPaq notes. The hub, NIC, audio and lane-split blocks are shown dashed because their chips aren’t publicly confirmed.</p>
+    </section>
+
+    <h2 class="part">B · The incident</h2>
+
+    <section class="fig" id="f04">
+      <div class="fig-head"><span class="fig-no">FIG 04</span><h3>Normal USB-C bring-up</h3><span class="kind">ANIMATED</span><button class="play" data-play="f04" type="button">▶ Play sequence</button><button class="copy" data-copy="f04" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f04"></div>
+    </section>
+
+    <section class="fig" id="f05">
+      <div class="fig-head"><span class="fig-no">FIG 05</span><h3>Failure state</h3><span class="kind">SVG</span><button class="copy" data-copy="f05" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f05"></div>
+      <p class="cap">Next time, before resetting: open Device Manager → View → Devices by connection, and check “USB Connector Managers” for an error on the UCM-UCSI device. Then unplug and replug the dock once. If a replug alone fixes it, the stuck state was cleared by a detach rather than by power loss.</p>
+    </section>
+
+    <h2 class="part">C · The reset</h2>
+
+    <section class="fig" id="f06">
+      <div class="fig-head"><span class="fig-no">FIG 06</span><h3>Why a Windows restart may not fix it</h3><span class="kind">SPLIT SCREEN</span><button class="copy" data-copy="f06" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f06"></div>
+      <p class="cap">Restart is a warm reset of the CPU and OS. With Fast Startup, Windows “Shut down” is a hybrid hibernate. With a dock attached, the PD controller must stay powered to keep charging, so neither path is guaranteed to clear it.</p>
+    </section>
+
+    <section class="fig" id="f07">
+      <div class="fig-head"><span class="fig-no">FIG 07</span><h3>Power rail map</h3><span class="kind">SVG</span><button class="copy" data-copy="f07" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f07"></div>
+    </section>
+
+    <section class="fig" id="f08">
+      <div class="fig-head"><span class="fig-no">FIG 08</span><h3>“Off” does not always mean 0 V</h3><span class="kind">SVG</span><button class="copy" data-copy="f08" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f08"></div>
+    </section>
+
+    <section class="fig" id="f09">
+      <div class="fig-head"><span class="fig-no">FIG 09</span><h3>Power-button electrical path</h3><span class="kind">MYTH VS REALITY</span><button class="copy" data-copy="f09" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f09"></div>
+    </section>
+
+    <section class="fig" id="f10">
+      <div class="fig-head"><span class="fig-no">FIG 10</span><h3>Capacitor / rail voltage decay</h3><span class="kind">INTERACTIVE CHART</span><button class="copy" data-copy="f10" type="button">Copy SVG</button></div>
+      <div class="controls">
+        <label for="vth">Retention threshold <output id="vth-out">1.20 V</output></label>
+        <input id="vth" type="range" min="0.5" max="2.8" step="0.05" value="1.2">
+        <label for="tau">Time constant τ = RC</label>
+        <select id="tau"></select>
+      </div>
+      <div class="viz" data-fig="f10"></div>
+      <p class="cap">Hover the curve to read V(t). Only the shape is general. The threshold and τ are illustrative, because real rails depend on capacitance, load and any active-discharge FET.</p>
+    </section>
+
+    <section class="fig" id="f11">
+      <div class="fig-head"><span class="fig-no">FIG 11</span><h3>What actually discharges the rail</h3><span class="kind">INTERACTIVE</span><button class="copy" data-copy="f11" type="button">Copy SVG</button></div>
+      <div class="controls seg" role="group" aria-label="Regulator state">
+        <button type="button" data-reg="on">Regulator ON</button><button type="button" data-reg="off" class="on">Regulator OFF</button>
+      </div>
+      <div class="viz" data-fig="f11"></div>
+    </section>
+
+    <section class="fig" id="f12">
+      <div class="fig-head"><span class="fig-no">FIG 12</span><h3>Volatile vs non-volatile state</h3><span class="kind">INTERACTIVE</span><button class="copy" data-copy="f12" type="button">Copy SVG</button></div>
+      <div class="controls seg" role="group" aria-label="Power domain">
+        <button type="button" data-dom="on">Domain powered</button><button type="button" data-dom="off" class="on">Domain collapses</button>
+      </div>
+      <div class="viz" data-fig="f12"></div>
+    </section>
+
+    <section class="fig" id="f13">
+      <div class="fig-head"><span class="fig-no">FIG 13</span><h3>Reset types are not interchangeable</h3><span class="kind">MATRIX</span><button class="copy" data-copy="f13" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f13"></div>
+    </section>
+
+    <section class="fig" id="f14">
+      <div class="fig-head"><span class="fig-no">FIG 14</span><h3>OEM reset timeline</h3><span class="kind">TIMELINE · SOURCED</span><button class="copy" data-copy="f14" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f14"></div>
+      <div class="srcs">
+        <table>
+          <thead><tr><th>Platform</th><th>Procedure</th><th>Hold</th><th>Source</th></tr></thead>
+          <tbody>
+            <tr><td>All ACPI PCs</td><td>Power-button override → soft-off</td><td class="num">&gt; 4 s</td><td><a href="https://uefi.org/specs/ACPI/6.5/04_ACPI_Hardware_Specification.html" target="_blank" rel="noopener">ACPI 6.5 §4.8.2.2.1.3</a></td></tr>
+            <tr><td>HP notebooks</td><td>Power (hard) reset, AC unplugged</td><td class="num">≈ 15 s</td><td><a href="https://support.hp.com/au-en/document/ish_1997208-1551050-16" target="_blank" rel="noopener">HP Support</a></td></tr>
+            <tr><td>Dell</td><td>Hard reset / flea-power drain</td><td class="num">15–20 s</td><td><a href="https://www.dell.com/support/kbdoc/en-us/000139016/how-to-perform-hard-reset" target="_blank" rel="noopener">Dell KB 000139016</a></td></tr>
+            <tr><td>Dell (select laptops)</td><td>RTC reset, AC connected; aborts if &lt; 25 s or &gt; 40 s</td><td class="num">30–35 s</td><td><a href="https://www.dell.com/support/kbdoc/en-us/000125880/" target="_blank" rel="noopener">Dell KB 000125880</a></td></tr>
+            <tr><td>Lenovo ThinkPad</td><td>Emergency-reset pinhole, AC removed</td><td class="num">not stated</td><td><a href="https://support.lenovo.com/lc/en/solutions/ht510479-device-does-not-restart-after-bios-update" target="_blank" rel="noopener">Lenovo HT510479</a></td></tr>
+            <tr><td>Surface (Pro 5th gen+, Laptop…)</td><td>Force restart until logo</td><td class="num">≈ 20 s</td><td><a href="https://support.microsoft.com/help/4036280" target="_blank" rel="noopener">Microsoft 4036280</a></td></tr>
+            <tr><td>Surface (Pro 4 and earlier)</td><td>Power + volume-up</td><td class="num">≈ 15 s</td><td><a href="https://support.microsoft.com/help/4036280" target="_blank" rel="noopener">Microsoft 4036280</a></td></tr>
+          </tbody>
+        </table>
+        <p class="cap">Not plotted: HP and Lenovo EC-reset timings that only appear second-hand on forums.</p>
+      </div>
+    </section>
+
+    <section class="fig" id="f15">
+      <div class="fig-head"><span class="fig-no">FIG 15</span><h3>Why 45 seconds may have worked</h3><span class="kind">TIMELINE</span><button class="copy" data-copy="f15" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f15"></div>
+    </section>
+
+    <h2 class="part">D · Diagnose</h2>
+
+    <section class="fig" id="f16">
+      <div class="fig-head"><span class="fig-no">FIG 16</span><h3>Diagnostic decision tree</h3><span class="kind">CLICKABLE</span><button class="reset-tree" type="button">Show incident path</button><button class="copy" data-copy="f16" type="button">Copy SVG</button></div>
+      <div class="split">
+        <div class="viz" data-fig="f16"></div>
+        <aside class="info" id="tree-info" aria-live="polite"></aside>
+      </div>
+      <p class="cap">Click a question to flip its answer, or a box for what to check next.</p>
+    </section>
+
+    <section class="fig" id="f17">
+      <div class="fig-head"><span class="fig-no">FIG 17</span><h3>Before · reset · after</h3><span class="kind">3-PANEL</span><button class="copy" data-copy="f17" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f17"></div>
+    </section>
+
+    <h2 class="part">E · Explore</h2>
+
+    <section class="fig" id="f18">
+      <div class="fig-head"><span class="fig-no">FIG 18</span><h3>Exploded laptop view</h3><span class="kind">ISOMETRIC SVG</span><button class="copy" data-copy="f18" type="button">Copy SVG</button></div>
+      <div class="viz" data-fig="f18"></div>
+      <p class="cap">A vector stand-in for the photoreal render. The matching image-generation prompt is in <a href="https://github.com/pavelkondratyukrepo/USB4/blob/main/docs/image-prompts.md">docs/image-prompts.md</a>.</p>
+    </section>
+
+    <section class="fig" id="f19">
+      <div class="fig-head"><span class="fig-no">FIG 19</span><h3>Interactive motherboard</h3><span class="kind">CLICK ANY PART</span></div>
+      <div class="controls seg modes" role="group" aria-label="Board mode">
+        <button type="button" data-mode="normal">Normal</button><button type="button" data-mode="failure" class="on">Dock failure</button><button type="button" data-mode="restart">Windows restart</button><button type="button" data-mode="hardreset">Hard reset</button><button type="button" data-mode="coldboot">Cold boot</button>
+      </div>
+      <div class="split wide">
+        <div class="viz" data-fig="f19"></div>
+        <aside class="info" id="part-info" aria-live="polite"></aside>
+      </div>
+      <p class="cap mode-note" id="mode-note"></p>
+    </section>
+
+    <section class="fig" id="f20">
+      <div class="fig-head"><span class="fig-no">FIG 20</span><h3>Power-rail simulator</h3><span class="kind">LIVE SIMULATION</span></div>
+      <div class="sim" id="sim">
+        <div class="sim-btns" role="group" aria-label="Actions">
+          <button type="button" data-act="on">System on</button>
+          <button type="button" data-act="restart">Windows restart</button>
+          <button type="button" data-act="shutdown">Windows shutdown</button>
+          <button type="button" data-act="ac">Remove / attach dock</button>
+          <button type="button" data-act="hold10">Hold power 10 s</button>
+          <button type="button" data-act="hold15">Hold power 15 s</button>
+          <button type="button" data-act="hold30">Hold power 30 s</button>
+          <button type="button" data-act="hold45" class="hot">Hold power 45 s</button>
+          <button type="button" data-act="cold">Cold boot</button>
+          <button type="button" data-act="reset" class="ghost">↺ Reset to incident</button>
+        </div>
+        <div class="controls">
+          <label class="chk"><input type="checkbox" id="sim-ac" checked> Dock attached (VBUS present)</label>
+          <label for="sim-deep">Deep-reset threshold <output id="sim-deep-out">15 s</output></label>
+          <input id="sim-deep" type="range" min="5" max="40" step="1" value="15">
+          <label for="sim-tau">Controller-rail decay τ</label>
+          <select id="sim-tau"><option value="0.05">50 ms (strong load)</option><option value="0.5">0.5 s</option><option value="2" selected>2 s (weak bleed)</option><option value="8">8 s (almost no bleed)</option></select>
+          <label for="sim-speed">Speed</label>
+          <select id="sim-speed"><option value="1">×1 real time</option><option value="3">×3</option><option value="6" selected>×6</option><option value="12">×12</option></select>
+        </div>
+        <div class="sim-status"></div>
+        <div class="viz"><svg class="sim-svg fig-svg" viewBox="0 0 1200 570" role="img" aria-label="Rail voltages over the last 60 seconds"></svg></div>
+        <ol class="sim-log" aria-live="polite"></ol>
+      </div>
+      <p class="cap">Conceptual representative model. Actual rail sequencing is platform-specific. Try a 15 s hold, then a 45 s hold. With the default settings the 15 s hold reaches the threshold but leaves no time for the rail to decay.</p>
+    </section>
+
+    <h2 class="part">F · Conclusions</h2>
+
+    <section class="fig" id="f21">
+      <div class="fig-head"><span class="fig-no">FIG 21</span><h3>Root-cause hypothesis map</h3><span class="kind">CLICK A HYPOTHESIS</span><button class="copy" data-copy="f21" type="button">Copy SVG</button></div>
+      <div class="split">
+        <div class="viz" data-fig="f21"></div>
+        <aside class="info" id="hypo-info" aria-live="polite"></aside>
+      </div>
+      <p class="cap">Green means consistent with the evidence, not proven. The dock’s absence from Device Manager moved the scoring. USB 2.0 needs no Alt Mode and bypasses the mux, so Alt Mode or the mux alone can’t explain it. The break is earlier, in the connection state the PD controller reports.</p>
+    </section>
+
+    <section class="fig" id="f22">
+      <div class="fig-head"><span class="fig-no">FIG 22</span><h3>Myth vs reality</h3><span class="kind">FLIP CARDS</span></div>
+      <div class="cards" id="cards"></div>
+    </section>
+
+    <section class="fig master-sec" id="master">
+      <div class="fig-head"><span class="fig-no">★</span><h3>Master infographic</h3><span class="kind">2400 px POSTER</span><button class="copy" data-copy="master" type="button">Copy SVG</button></div>
+      <div class="viz poster" data-fig="master"></div>
+      <p class="cap">Download the poster as <a href="export/master-infographic.svg">SVG</a>, <a href="export/master-infographic.png">PNG (4800 px)</a> or <a href="export/master-infographic.pdf">PDF</a>. Every figure is also exported as its own SVG and PNG in the <code>export/</code> folder.</p>
+    </section>
+  </main>
+</div>
+<footer class="foot wrap">
+  <p>Sources: ACPI 6.5 · HP USB-C Dock G5 datasheet and SoftPaq firmware notes · HP, Dell, Lenovo and Microsoft support documents (linked under FIG 14). All board-level drawings are representative.</p>
+</footer>
+<div class="tooltip" id="tooltip" hidden></div>
