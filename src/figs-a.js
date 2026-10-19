@@ -61,7 +61,7 @@ function fig02() {
   s += bigMark(1088, 270, false) + T(1110, 334, 'MISSING', 'mid ts tw c-fail');
   s += bigMark(1088, 432, false) + T(1110, 496, 'MISSING', 'mid ts tw c-fail');
   s += `<rect x="660" y="540" width="500" height="54" rx="6" fill="rgba(255,79,79,.08)" stroke="${P.fail}" stroke-opacity=".6"/>`;
-  s += T(680, 562, 'Charging proves VBUS + CC + PD are healthy.', 'ts tw') + T(680, 580, 'It proves nothing about the data and display paths.', 'ts c-dim');
+  s += T(680, 562, 'Charging shows VBUS + CC + PD were working.', 'ts tw') + T(680, 580, 'It says nothing about the data and display paths.', 'ts c-dim');
   return svgWrap(1200, 620, s, 'USB-C connector cutaway: power works, USB data and DisplayPort missing');
 }
 
@@ -156,7 +156,7 @@ function fig04() {
   return svgWrap(1200, 580, s, 'Normal USB-C dock bring-up sequence, ten stages', 'seq');
 }
 function fig05() {
-  let s = TH(40, 50, 'WHERE THE CHAIN BROKE', 'txl') + T(40, 72, 'Power contract completed (charging proves it). The dock never appeared in Device Manager, so the break sits before ANY USB enumeration — USB 2.0 included.', 'ts c-dim');
+  let s = TH(40, 50, 'WHERE THE CHAIN MOST LIKELY BROKE', 'txl') + T(40, 72, 'Observed: charging worked; the dock never appeared in Device Manager. Inferred: the break was probably before ANY USB enumeration, USB 2.0 included.', 'ts c-dim') + evTag(1200);
   const nodeBox = (x, y, w, title, ok, role, fs = 21) => {
     const c = ok === true ? (ROLE[role] || role) : ok === 'warn' ? P.warn : ok === 'off' ? P.off : P.fail;
     return `<rect x="${x}" y="${y}" width="${w}" height="64" rx="10" fill="${ok === 'warn' ? 'url(#hatchRed)' : P.bg}" stroke="${c}" stroke-width="2.5" ${ok === 'warn' ? 'class="pulse"' : ''} ${ok === 'off' ? 'stroke-dasharray="6 5"' : 'filter="url(#glow)"'}/>` +
@@ -170,7 +170,7 @@ function fig05() {
   s += `<rect x="650" y="214" width="320" height="72" rx="36" fill="${P.bg}" stroke="${P.pwr}" stroke-width="2.5" filter="url(#glow)"/>` + icon('i-bolt', 674, 232, 36, P.pwr) + TH(722, 262, 'CHARGING', '', 'style="font-size:22px"') + bigMark(910, 228, true, 44);
   s += arrow('M270,282 V330', P.warn, 3);
   s += nodeBox(80, 334, 560, 'USB CONNECTION / DATA-ROLE STATE', 'warn', 'pwr', 20);
-  s += TH(170, 432, 'STUCK', '', `style="font-size:30px;fill:${P.fail}" filter="url(#glow)"`) + T(270, 418, 'PD controller (via EC) never reports a USB connection,', 'ts c-dim') + T(270, 434, 'so the host never enables the port’s USB 2.0 or USB 3', 'ts c-dim');
+  s += TH(170, 432, 'STUCK?', '', `style="font-size:30px;fill:${P.fail}" filter="url(#glow)"`) + T(292, 418, 'Hypothesis: PD controller (via EC) never', 'ts c-dim') + T(292, 434, 'reported a USB connection to the host', 'ts c-dim');
   // downstream: USB 2 path, Alt Mode path
   s += arrow('M150,398 V454', 'fail', 2.5, 'stroke-dasharray="6 5"') + arrow('M620,398 V454', 'fail', 2.5, 'stroke-dasharray="6 5"');
   s += nodeBox(80, 458, 380, 'USB 2.0 ENUMERATION', 'off', 'io', 18) + nodeBox(480, 458, 330, 'ALT MODE · MUX · DP', 'off', 'io', 18);
@@ -178,7 +178,7 @@ function fig05() {
   s += arrow('M300,522 C300,600 560,600 646,600', 'fail', 2.5) + arrow('M810,490 C840,490 850,600 860,610', 'fail', 2.5);
   s += `<rect x="650" y="568" width="250" height="64" rx="32" fill="${P.bg}" stroke="${P.fail}" stroke-width="2.5"/>` + icon('i-usb', 670, 584, 32, P.ink) + TH(712, 610, 'USB · LAN', '', 'style="font-size:20px"') + bigMark(846, 580, false, 40);
   s += `<rect x="910" y="568" width="250" height="64" rx="32" fill="${P.bg}" stroke="${P.fail}" stroke-width="2.5"/>` + icon('i-mon', 930, 584, 32, P.ink) + TH(972, 610, 'DISPLAYS', '', 'style="font-size:20px"') + bigMark(1106, 580, false, 40);
-  s += `<g transform="translate(1000,110)"><rect width="170" height="420" rx="8" fill="#0b1712" stroke="${P.line}"/>` + TL(14, 28, 'WHY THIS SHAPE\nMATTERS\n\nIf only Alt Mode\nhad failed, USB 2.0\nwould still work and\nthe dock would show\na Billboard device.\n\nNothing showed up,\nso the stuck state\nsits upstream of\nboth paths.', 17, 'ts', 'style="fill:#cfdcd2"') + `</g>`;
+  s += `<g transform="translate(1000,110)"><rect width="170" height="420" rx="8" fill="#0b1712" stroke="${P.line}"/>` + TL(14, 28, 'THE REASONING\n\nIf only Alt Mode\nhad failed, USB 2.0\nwould normally still\nwork and a compliant\ndock would show a\nBillboard device.\n\nNothing showed up,\nwhich points to a\nstuck state upstream\nof both paths.\n\nInference, not proof.', 17, 'ts', 'style="fill:#cfdcd2"') + `</g>`;
   // evidence strip: Device Manager
   const y0 = 670;
   s += `<rect x="40" y="${y0}" width="1130" height="250" rx="10" fill="#08130e" stroke="${P.line}"/>` + T(60, y0 + 28, 'EVIDENCE · WINDOWS DEVICE MANAGER (View → Devices by connection)', 'ts tw c-aux');
@@ -188,8 +188,8 @@ function fig05() {
     return g;
   };
   s += dm(60, 'IF ONLY ALT MODE / LANES HAD FAILED (expected)', [[0, 'USB xHCI controller → Type-C port'], [1, 'Generic USB hub (dock, USB 2.0 side)'], [2, 'USB Billboard device  ← “display connection may be limited”', P.aux], [2, 'Dock USB 2.0 devices (management, audio …)'], [0, 'USB Connector Managers → UCM-UCSI ACPI device'], [0, 'no DisplayPort monitors · no USB 3 hub', P.ink2]], true);
-  s += dm(630, 'OBSERVED IN THIS INCIDENT', [[0, 'USB xHCI controller → Type-C port'], [1, '(nothing attached — no hub, no Billboard,', P.fail], [1, ' no Ethernet, no audio, no dock device)', P.fail], [0, 'Charging indicator: ON', P.pwr], [0, '→ break is before USB 2.0 enumeration', P.aux]], false);
-  return svgWrap(1200, 940, s, 'Failure state: charging works, USB connection state stuck before any USB enumeration, dock absent from Device Manager');
+  s += dm(630, 'OBSERVED IN THIS INCIDENT (as reported)', [[0, 'USB xHCI controller → Type-C port'], [1, '(dock not detected — no hub, no Billboard,', P.fail], [1, ' no Ethernet, no audio device listed)', P.fail], [0, 'Charging indicator: ON', P.pwr], [0, '→ suggests the break was before USB 2.0', P.aux]], false);
+  return svgWrap(1200, 940, s, 'Hypothesis: charging worked, USB connection state likely stuck before any USB enumeration, dock absent from Device Manager');
 }
 
 /* ================= FIG 06 — warm vs hardware reset ================= */
@@ -223,13 +223,13 @@ function fig06() {
   };
   s += col(20, 'WINDOWS RESTART', 'warm reset · OS-controlled', [
     ['CPU → RESET', 'warn', 'core reset'], ['WINDOWS → RELOAD', 'main', 'drivers re-init'], ['BUT'],
-    ['AUX POWER RAIL → STILL ON', 'aux', 'never switched'], ['USB-C CONTROLLER → POWERED', 'aux', 'keeps its RAM'], ['STUCK STATE → SURVIVES', 'fail', 'same bad state']
+    ['AUX POWER RAIL → STILL ON', 'aux', 'never switched'], ['USB-C CONTROLLER → POWERED', 'aux', 'keeps its RAM'], ['STUCK STATE → SURVIVES?', 'fail', 'same bad state']
   ], [true, false, false], scope(20, false));
   s += col(620, 'HARDWARE POWER-STATE RESET', 'long power-button hold · EC-controlled', [
     ['EC / POWER SEQUENCER', 'aux', 'reads PWR_BTN#'], ['REGULATORS DISABLED', 'warn', 'EN pins low'], ['RELEVANT RAILS COLLAPSE', 'off', 'caps discharge'],
     ['CONTROLLER LOSES STATE', 'off', 'volatile cleared'], ['COLD INITIALISATION', 'main', 'firmware reloads'], ['USB-C NEGOTIATES AGAIN', 'pwr', 'CC → PD → Alt Mode']
   ], [true, true, true], scope(620, true));
-  return svgWrap(1200, 680, s, 'Windows restart versus hardware power-state reset');
+  return svgWrap(1200, 708, s + evTag(1200, 'PROPOSED MECHANISM · HYPOTHESIS', P.warn, 672), 'Proposed mechanism: Windows restart versus hardware power-state reset');
 }
 
 /* ================= FIG 07 — power rail map ================= */
@@ -295,7 +295,7 @@ function fig09() {
     `<path d="M100,82 V150" stroke="${P.ink}" stroke-width="3"/><circle cx="100" cy="154" r="5" fill="${P.ink}"/><path d="M100,158 L140,200" stroke="${P.ink}" stroke-width="3"/><circle cx="100" cy="214" r="5" fill="${P.ink}"/>` + T(150, 186, 'POWER BUTTON', 'ts tw') +
     `<path d="M100,218 V290 M66,290 H134 M78,302 H122 M90,314 H110" stroke="${P.ink}" stroke-width="3"/>` + T(150, 300, 'GROUND', 'ts tw') + `</g>`;
   s += `<path d="M90,150 L430,500 M430,150 L90,500" stroke="${P.fail}" stroke-width="18" stroke-linecap="round" opacity=".9" filter="url(#glow)"/>`;
-  s += T(260, 556, 'No such path exists on a modern laptop.', 'mid ts c-dim');
+  s += T(260, 556, 'Not how typical modern laptops are designed.', 'mid ts c-dim');
   // CORRECT
   s += `<rect x="520" y="20" width="660" height="560" rx="10" fill="#0a1611" stroke="${P.line}"/>` + TH(544, 62, 'REALITY', 'txl', `style="fill:${P.pwr}"`) + T(544, 86, 'The button is a logic input to the EC', 'tm c-dim');
   const chain = [['POWER BUTTON', 'ink'], ['PWR_BTN# · logic level', 'sig'], ['EMBEDDED CONTROLLER', 'aux'], ['POWER SEQUENCER', 'aux'], ['PMIC / REGULATORS', 'main'], ['POWER RAILS', 'main']];

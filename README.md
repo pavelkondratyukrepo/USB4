@@ -1,6 +1,8 @@
 # USB-C Dock Failure, Explained
 
-An interactive engineering training module about a real incident:
+An interactive engineering training module about a real incident.
+
+> **Status: hypothesis · AI-assisted analysis.** The incident observations are real. The explanation was produced with AI assistance (Claude) from those observations and public documentation. It is a **hypothesis, not a confirmed root cause**. No logs or measurements were taken from the actual laptop or dock, and no HP or platform engineer has reviewed it. Each figure on the live page is tagged *Observed*, *Documented*, *Typical design*, *Illustrative* or *Hypothesis*.
 
 ```
 HP USB-C Dock G5 ──USB-C──▶ Windows business laptop

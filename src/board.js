@@ -28,12 +28,12 @@ const BOARD_MODES = {
     comp: { pd: 'ok', mux: 'ok', rt: 'ok' }, ep: [true, true, true], flow: true
   },
   failure: {
-    label: 'DOCK FAILURE', note: 'Power contract fine. Connection / data-role state wrong: nothing enumerates, not even USB 2.0.',
+    label: 'DOCK FAILURE', note: 'Hypothesis: power contract fine, but the USB connection / data-role state is wrong, so nothing enumerates, not even USB 2.0.',
     net: { pdrail: 'aux', vbus: 'pwr', vbat: 'pwr', vsys: 'pwr', aux: 'aux', main: 'main', ior: 'main', vcore: 'main', hs: 'fail', cc: 'io', sig: 'sig', pbtn: 'sig' },
     comp: { pd: 'fail', mux: 'fail', rt: 'fail' }, ep: [true, false, false], flow: true
   },
   restart: {
-    label: 'WINDOWS RESTART', note: 'CPU + OS reset. Always-on domain and its stuck state never lose power.',
+    label: 'WINDOWS RESTART', note: 'CPU + OS reset. The always-on domain (and, per the hypothesis, its stuck state) never loses power.',
     net: { pdrail: 'aux', vbus: 'pwr', vbat: 'pwr', vsys: 'pwr', aux: 'aux', main: 'main', ior: 'main', vcore: 'warn', hs: 'fail', cc: 'io', sig: 'sig', pbtn: 'sig' },
     comp: { pd: 'fail', mux: 'fail', rt: 'fail', cpu: 'warn', usbctl: 'warn' }, ep: [true, false, false], flow: true
   },
@@ -73,7 +73,7 @@ function boardSVG(mode = 'failure', opt = {}) {
   let s = '';
   /* legend + title strip */
   if (opt.legend !== false) {
-    const L = [['pwr', 'POWER SOURCE / WORKING'], ['aux', 'ALWAYS-ON (AUX)'], ['main', 'MAIN (S0) RAILS'], ['io', 'USB-C HIGH-SPEED I/O'], ['fail', 'FAILED / STUCK'], ['off', 'POWERED DOWN']];
+    const L = [['pwr', 'POWER SOURCE / WORKING'], ['aux', 'ALWAYS-ON (AUX)'], ['main', 'MAIN (S0) RAILS'], ['io', 'USB-C HIGH-SPEED I/O'], ['fail', 'SUSPECTED STUCK'], ['off', 'POWERED DOWN']];
     L.forEach(([k, l], i) => { const x = 70 + i * 180; s += `<rect x="${x}" y="22" width="22" height="6" rx="3" fill="${ROLE[k]}" ${k !== 'off' ? 'filter="url(#glow)"' : ''}/>` + T(x + 30, 30, l, 'ts c-dim'); });
     s += T(1150, 52, `MODE · ${M.label}`, 'end tw', `style="fill:${mode === 'normal' || mode === 'coldboot' ? P.pwr : mode === 'hardreset' ? P.aux : P.fail}"`);
   }
@@ -150,14 +150,14 @@ function boardSVG(mode = 'failure', opt = {}) {
   /* ---------- endpoint status ---------- */
   s += T(930, 662, 'AT THE DOCK', 'ts c-dim tw');
   s += statusPill(930, 672, 'pwr', M.ep[0], 'CHARGING', 210) + statusPill(930, 714, 'usb', M.ep[1], 'USB · ETHERNET', 210) + statusPill(930, 756, 'dp', M.ep[2], 'DISPLAYS', 210);
-  if (opt.disclaimer !== false) s += T(70, 822, 'Representative modern business-laptop architecture — exact implementation varies by model.', 'ts c-dim');
+  if (opt.disclaimer !== false) s += T(70, 822, 'Representative modern business-laptop architecture — exact implementation varies by model.' + (mode === 'failure' || mode === 'restart' ? ' Red = suspected area (hypothesis).' : ''), 'ts c-dim');
   return svgWrap(1200, 832, s, 'PCB-style laptop motherboard, mode ' + M.label, 'board');
 }
 
 /* ---------- FIG 19 component dossier ---------- */
 const PART_INFO = {
   port: { does: 'Passive 24-pin receptacle. Carries VBUS, CC1/CC2, USB 2.0 D+/D−, four SuperSpeed pairs and SBU1/2 at once.', domain: ['none — passive'], shut: ['n/a'], stuck: 'Cannot hold logic state. Debris, wear or a half-seated plug can break individual pins while power still flows.', reset: ['NO effect', 'off'] },
-  pd: { does: 'USB-C port controller. Detects attach on CC, negotiates the PD power contract, runs Alt Mode discovery (Discover Identity → SVIDs → Modes → Enter Mode) and tells the mux what to route.', domain: ['3V3_AUX', 'or VBUS (dead-battery)'], shut: ['OFTEN YES', 'aux'], stuck: 'The power contract can stay valid while the connection / data-role state is wrong. If the host is never told “USB connected”, even USB 2.0 stays off — charging works, nothing enumerates, the dock is absent from Device Manager. Fits the incident.', reset: ['POSSIBLY', 'warn'], resetNote: 'If its supply collapses, or the EC/sequencer re-initialises it during cold boot. Not guaranteed while a dock keeps VBUS present.' },
+  pd: { does: 'USB-C port controller. Detects attach on CC, negotiates the PD power contract, runs Alt Mode discovery (Discover Identity → SVIDs → Modes → Enter Mode) and tells the mux what to route.', domain: ['3V3_AUX', 'or VBUS (dead-battery)'], shut: ['OFTEN YES', 'aux'], stuck: 'The power contract can stay valid while the connection / data-role state is wrong. If the host is never told “USB connected”, even USB 2.0 stays off — charging works, nothing enumerates, the dock is absent from Device Manager. Consistent with the incident (hypothesis, not confirmed).', reset: ['POSSIBLY', 'warn'], resetNote: 'If its supply collapses, or the EC/sequencer re-initialises it during cold boot. Not guaranteed while a dock keeps VBUS present.' },
   mux: { does: 'Routes the four SuperSpeed lane pairs to USB 3 or DisplayPort according to plug orientation and the DP pin assignment (C = 4 DP lanes, D = 2 DP + USB 3).', domain: ['I/O rail', 'S0 / platform-specific'], shut: ['USUALLY NO', 'off'], stuck: 'Lanes routed wrong or not at all: SuperSpeed USB and DP vanish — but USB 2.0 bypasses the mux, so the dock would still appear in Device Manager. Weak fit alone.', reset: ['LIKELY', 'pwr'], resetNote: 'Loses its register configuration when its rail drops; rewritten by the PD controller after boot.' },
   rt: { does: 'Retimer / redriver. Recovers and re-transmits multi-gigabit lanes so they survive board + cable loss. Present on many USB4/TBT designs; plain USB-C designs may use a redriver or nothing.', domain: ['I/O rail', 'S0'], shut: ['USUALLY NO', 'off'], stuck: 'Lane training fails: links never come up even though the connector is fine.', reset: ['LIKELY', 'pwr'] },
   chg: { does: 'Narrow-VDC charger + power path. Picks VBUS or battery, builds the system bus (VSYS), charges the pack. Controlled by the EC over SMBus.', domain: ['VBUS in', 'VSYS out ≈ VBAT'], shut: ['YES', 'pwr'], stuck: 'Charging would misbehave. In this incident charging worked — evidence the charger path was healthy.', reset: ['NOT TYPICALLY', 'off'] },

@@ -143,7 +143,7 @@ function fig13() {
   });
   const ly = 590;
   s += `<circle cx="60" cy="${ly}" r="9" fill="${P.pwr}"/>` + T(76, ly + 4, 'cleared / re-initialised', 'ts') + `<circle cx="290" cy="${ly}" r="9" fill="none" stroke="${P.warn}" stroke-width="2"/><path d="M290,${ly - 9} A9,9 0 0 1 290,${ly + 9}Z" fill="${P.warn}"/>` + T(306, ly + 4, 'platform-dependent (rail wiring, dock VBUS, sealed battery)', 'ts') + `<circle cx="760" cy="${ly}" r="8" fill="none" stroke="#6c7c74" stroke-width="2"/>` + T(776, ly + 4, 'survives', 'ts');
-  s += T(40, 622, 'The incident: Level 1 did not fix it, a long hold (Level 2–3 territory) did → the stuck state lived in a domain a restart never powers down.', 'ts tw c-aux');
+  s += T(40, 622, 'This incident: Level 1 did not fix it, a long hold (Level 2–3) did → suggests the state lived in a domain a restart never powers down.', 'ts tw c-aux');
   return svgWrap(1200, 640, s, 'Five reset levels and what each clears');
 }
 
@@ -187,8 +187,8 @@ function fig14(compact = false) {
   });
   if (!compact) {
     s += `<rect x="40" y="${LY(5) + 76}" width="1110" height="92" rx="8" fill="#0a1611" stroke="${P.line}"/>`;
-    s += TH(60, LY(5) + 106, 'IS 45 SECONDS ACTUALLY SPECIAL?', '', 'style="font-size:19px"') + TH(420, LY(5) + 106, 'NO — IT IS MARGIN, NOT MAGIC.', '', `style="font-size:19px;fill:${P.pwr}"`);
-    s += T(60, LY(5) + 130, 'Every verified threshold above is ≤ 40 s. A 45 s hold passes all of them, so whichever one this laptop uses, it fired.', 'ts');
+    s += TH(60, LY(5) + 106, 'IS 45 SECONDS ACTUALLY SPECIAL?', '', 'style="font-size:19px"') + TH(420, LY(5) + 106, 'PROBABLY NOT — MOST LIKELY MARGIN, NOT MAGIC.', '', `style="font-size:19px;fill:${P.pwr}"`);
+    s += T(60, LY(5) + 130, 'Every documented threshold above is ≤ 40 s. A 45 s hold passes all of them, so it would have cleared whichever one this laptop uses.', 'ts');
     s += T(60, LY(5) + 150, 'Caution: Dell’s RTC reset aborts if held > 40 s with AC connected — longer is not automatically “deeper”.', 'ts', `style="fill:${P.warn}"`);
   }
   return svgWrap(1200, compact ? 560 : 700, s, 'Timeline of OEM-documented power-button reset procedures with 45 second marker');
@@ -196,7 +196,7 @@ function fig14(compact = false) {
 
 /* ================= FIG 15 — why 45 s may have worked ================= */
 function fig15() {
-  let s = TH(40, 44, 'WHY A 45-SECOND HOLD MAY HAVE WORKED', 'txl') + T(40, 64, 'Proportional bar · regulator + rail timing is board-dependent (ms → s); everything after it is margin', 'ts c-dim');
+  let s = evTag(1200) + TH(40, 44, 'WHY A 45-SECOND HOLD MAY HAVE WORKED', 'txl') + T(40, 64, 'Proportional bar · regulator + rail timing is board-dependent (ms → s); everything after it is margin', 'ts c-dim');
   const X0 = 60, X1 = 1140, tx = t => X0 + t / 45 * (X1 - X0);
   const steps = [
     [0, 'POWER BUTTON HELD', 'EC starts counting', P.ink],
@@ -204,7 +204,7 @@ function fig15() {
     [4.2, 'REGULATORS DISABLED', 'EC drops EN lines', P.warn],
     [5.2, 'RAILS COLLAPSE', 'capacitors drain through loads', P.aux],
     [6.2, 'RETENTION THRESHOLD CROSSED', 'controller can no longer hold state', P.fail],
-    [7.2, 'VOLATILE STATE LOST', 'stuck Alt Mode / mux state gone', P.off]
+    [7.2, 'VOLATILE STATE LOST', 'suspected stuck connection state cleared', P.off]
   ];
   steps.forEach(([t, n, d, c], i) => {
     const y = 100 + i * 52;

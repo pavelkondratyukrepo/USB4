@@ -128,7 +128,7 @@
 
   /* ---- FIG 22 myth cards ---- */
   const MYTHS = [
-    ['“Static electricity was trapped.”', 'More likely a controller, power-state or negotiation issue.', 'Charge on rails is ordinary capacitor energy that drains in ms–s. The fix pattern points to volatile controller state.'],
+    ['“Static electricity was trapped.”', 'More likely a controller, power-state or negotiation issue (our hypothesis).', 'Charge on rails is ordinary capacitor energy that drains in ms–s. The fix pattern points to volatile controller state.'],
     ['“The power button drains the motherboard.”', 'The button sends a logic signal to the EC / power sequencer.', 'Current through it is set by a pull-up resistor, e.g. 3.3 V ÷ 100 kΩ ≈ 33 µA. Rails drain through loads and bleeders.'],
     ['“45 seconds clears CMOS.”', 'Not generally.', 'Dell’s documented RTC reset is 25–40 s with AC connected, and holding > 40 s aborts it. Other OEMs use jumpers, key combos or setup menus.'],
     ['“The EC carries USB data.”', 'USB data travels through USB controllers, PHYs and the mux path.', 'The EC manages power, battery, keyboard and often configures the PD controller over I²C, but it does not carry USB data.'],

@@ -1,6 +1,6 @@
 <header class="hero">
   <div class="wrap">
-    <div class="eyebrow">ENGINEERING TRAINING MODULE · USB-C / PLATFORM POWER · REV A</div>
+    <div class="eyebrow">ENGINEERING TRAINING MODULE · USB-C / PLATFORM POWER · AI-ASSISTED HYPOTHESIS · REV B</div>
     <h1>USB-C Dock Failure, <span>Explained</span></h1>
     <p class="lede">HP USB-C Dock G5 on a Windows business laptop. Charging kept working, but USB, Ethernet and displays vanished, and the dock didn’t appear in Device Manager at all. A restart didn’t help. Holding the power button for about 45 seconds brought everything back.</p>
     <div class="incident" aria-label="Incident summary">
@@ -14,13 +14,23 @@
         <span class="pill ok">CHARGING ✓</span><span class="pill ok">USB · LAN ✓</span><span class="pill ok">DISPLAYS ✓</span>
       </div>
     </div>
-    <p class="caveat">Representative architecture, not one specific laptop. The reset narrows the suspects. It does not prove which controller failed.</p>
+    <aside class="status" aria-label="Status of this analysis">
+      <div class="status-h">HYPOTHESIS · AI-ASSISTED ANALYSIS</div>
+      <p>The incident observations are real. The explanation is an AI-assisted analysis (Claude), built from those observations and public documentation. It is a <b>hypothesis, not a confirmed root cause</b>. No logs were captured and nothing was measured on the actual laptop or dock, and no HP or platform engineer has reviewed it. Board-level drawings are representative, not this exact laptop.</p>
+      <div class="ev-key">
+        <span class="ev obs">OBSERVED</span><span>what actually happened</span>
+        <span class="ev doc">DOCUMENTED</span><span>from a spec or OEM source</span>
+        <span class="ev typ">TYPICAL DESIGN</span><span>how laptops usually work; varies by model</span>
+        <span class="ev ill">ILLUSTRATIVE</span><span>representative drawing or values</span>
+        <span class="ev hyp">HYPOTHESIS</span><span>inferred explanation, not proven</span>
+      </div>
+    </aside>
     <div class="legend" aria-label="Colour code">
       <span><i style="background:var(--pwr)"></i>power / working</span>
       <span><i style="background:var(--aux)"></i>auxiliary / always-on</span>
       <span><i style="background:var(--main)"></i>main system rails</span>
       <span><i style="background:var(--io)"></i>USB-C / high-speed data</span>
-      <span><i style="background:var(--fail)"></i>failure / stuck</span>
+      <span><i style="background:var(--fail)"></i>suspected failure / stuck</span>
       <span><i style="background:var(--off)"></i>powered down</span>
     </div>
   </div>
@@ -46,19 +56,19 @@
     <h2 class="part">A · The hardware</h2>
 
     <section class="fig" id="f01">
-      <div class="fig-head"><span class="fig-no">FIG 01</span><h3>Master PCB motherboard</h3><span class="kind">SVG · incident state</span><button class="copy" data-copy="f01" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 01</span><h3>Master PCB motherboard</h3><span class="ev ill">ILLUSTRATIVE</span><span class="kind">SVG · incident state</span><button class="copy" data-copy="f01" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f01"></div>
-      <p class="cap">Power enters at J1, becomes VSYS, then splits into always-on (yellow) and main (blue) rails. The red parts are the PD controller, mux and retimer, which sit on the path shared by USB and DisplayPort. The power button is only a dashed logic line to the EC.</p>
+      <p class="cap">Power enters at J1, becomes VSYS, then splits into always-on (yellow) and main (blue) rails. Red marks the suspected area: the PD controller, mux and retimer, which sit on the path shared by USB and DisplayPort. The power button is only a dashed logic line to the EC.</p>
     </section>
 
     <section class="fig" id="f02">
-      <div class="fig-head"><span class="fig-no">FIG 02</span><h3>USB-C connector cutaway</h3><span class="kind">SVG</span><button class="copy" data-copy="f02" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 02</span><h3>USB-C connector cutaway</h3><span class="ev doc">DOCUMENTED · USB-C SPEC</span><span class="kind">SVG</span><button class="copy" data-copy="f02" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f02"></div>
       <p class="cap">USB-C Type-C receptacle pinout (A1–A12 / B12–B1). The four SuperSpeed pairs are shared: the mux gives them to USB 3 or to DisplayPort.</p>
     </section>
 
     <section class="fig" id="f03">
-      <div class="fig-head"><span class="fig-no">FIG 03</span><h3>HP USB-C Dock G5 cutaway</h3><span class="kind">SVG · verified vs representative</span><button class="copy" data-copy="f03" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 03</span><h3>HP USB-C Dock G5 cutaway</h3><span class="ev doc">DOCUMENTED + ILLUSTRATIVE</span><span class="kind">SVG · verified vs representative</span><button class="copy" data-copy="f03" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f03"></div>
       <p class="cap">Ports, power levels and the three firmware-updatable controllers come from HP’s datasheet and SoftPaq notes. The hub, NIC, audio and lane-split blocks are shown dashed because their chips aren’t publicly confirmed.</p>
     </section>
@@ -66,12 +76,12 @@
     <h2 class="part">B · The incident</h2>
 
     <section class="fig" id="f04">
-      <div class="fig-head"><span class="fig-no">FIG 04</span><h3>Normal USB-C bring-up</h3><span class="kind">ANIMATED</span><button class="play" data-play="f04" type="button">▶ Play sequence</button><button class="copy" data-copy="f04" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 04</span><h3>Normal USB-C bring-up</h3><span class="ev typ">TYPICAL SEQUENCE</span><span class="kind">ANIMATED</span><button class="play" data-play="f04" type="button">▶ Play sequence</button><button class="copy" data-copy="f04" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f04"></div>
     </section>
 
     <section class="fig" id="f05">
-      <div class="fig-head"><span class="fig-no">FIG 05</span><h3>Failure state</h3><span class="kind">SVG</span><button class="copy" data-copy="f05" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 05</span><h3>Failure state: most likely break point</h3><span class="ev hyp">HYPOTHESIS</span><span class="kind">SVG</span><button class="copy" data-copy="f05" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f05"></div>
       <p class="cap">Next time, before resetting: open Device Manager → View → Devices by connection, and check “USB Connector Managers” for an error on the UCM-UCSI device. Then unplug and replug the dock once. If a replug alone fixes it, the stuck state was cleared by a detach rather than by power loss.</p>
     </section>
@@ -79,28 +89,28 @@
     <h2 class="part">C · The reset</h2>
 
     <section class="fig" id="f06">
-      <div class="fig-head"><span class="fig-no">FIG 06</span><h3>Why a Windows restart may not fix it</h3><span class="kind">SPLIT SCREEN</span><button class="copy" data-copy="f06" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 06</span><h3>Why a Windows restart may not fix it</h3><span class="ev hyp">HYPOTHESIS</span><span class="kind">SPLIT SCREEN</span><button class="copy" data-copy="f06" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f06"></div>
       <p class="cap">Restart is a warm reset of the CPU and OS. With Fast Startup, Windows “Shut down” is a hybrid hibernate. With a dock attached, the PD controller must stay powered to keep charging, so neither path is guaranteed to clear it.</p>
     </section>
 
     <section class="fig" id="f07">
-      <div class="fig-head"><span class="fig-no">FIG 07</span><h3>Power rail map</h3><span class="kind">SVG</span><button class="copy" data-copy="f07" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 07</span><h3>Power rail map</h3><span class="ev ill">ILLUSTRATIVE</span><span class="kind">SVG</span><button class="copy" data-copy="f07" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f07"></div>
     </section>
 
     <section class="fig" id="f08">
-      <div class="fig-head"><span class="fig-no">FIG 08</span><h3>“Off” does not always mean 0 V</h3><span class="kind">SVG</span><button class="copy" data-copy="f08" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 08</span><h3>“Off” does not always mean 0 V</h3><span class="ev typ">TYPICAL DESIGN</span><span class="kind">SVG</span><button class="copy" data-copy="f08" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f08"></div>
     </section>
 
     <section class="fig" id="f09">
-      <div class="fig-head"><span class="fig-no">FIG 09</span><h3>Power-button electrical path</h3><span class="kind">MYTH VS REALITY</span><button class="copy" data-copy="f09" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 09</span><h3>Power-button electrical path</h3><span class="ev typ">TYPICAL DESIGN</span><span class="kind">MYTH VS REALITY</span><button class="copy" data-copy="f09" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f09"></div>
     </section>
 
     <section class="fig" id="f10">
-      <div class="fig-head"><span class="fig-no">FIG 10</span><h3>Capacitor / rail voltage decay</h3><span class="kind">INTERACTIVE CHART</span><button class="copy" data-copy="f10" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 10</span><h3>Capacitor / rail voltage decay</h3><span class="ev ill">ILLUSTRATIVE MODEL</span><span class="kind">INTERACTIVE CHART</span><button class="copy" data-copy="f10" type="button">Copy SVG</button></div>
       <div class="controls">
         <label for="vth">Retention threshold <output id="vth-out">1.20 V</output></label>
         <input id="vth" type="range" min="0.5" max="2.8" step="0.05" value="1.2">
@@ -112,7 +122,7 @@
     </section>
 
     <section class="fig" id="f11">
-      <div class="fig-head"><span class="fig-no">FIG 11</span><h3>What actually discharges the rail</h3><span class="kind">INTERACTIVE</span><button class="copy" data-copy="f11" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 11</span><h3>What actually discharges the rail</h3><span class="ev typ">TYPICAL DESIGN</span><span class="kind">INTERACTIVE</span><button class="copy" data-copy="f11" type="button">Copy SVG</button></div>
       <div class="controls seg" role="group" aria-label="Regulator state">
         <button type="button" data-reg="on">Regulator ON</button><button type="button" data-reg="off" class="on">Regulator OFF</button>
       </div>
@@ -120,7 +130,7 @@
     </section>
 
     <section class="fig" id="f12">
-      <div class="fig-head"><span class="fig-no">FIG 12</span><h3>Volatile vs non-volatile state</h3><span class="kind">INTERACTIVE</span><button class="copy" data-copy="f12" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 12</span><h3>Volatile vs non-volatile state</h3><span class="ev typ">GENERAL PRINCIPLE</span><span class="kind">INTERACTIVE</span><button class="copy" data-copy="f12" type="button">Copy SVG</button></div>
       <div class="controls seg" role="group" aria-label="Power domain">
         <button type="button" data-dom="on">Domain powered</button><button type="button" data-dom="off" class="on">Domain collapses</button>
       </div>
@@ -128,12 +138,12 @@
     </section>
 
     <section class="fig" id="f13">
-      <div class="fig-head"><span class="fig-no">FIG 13</span><h3>Reset types are not interchangeable</h3><span class="kind">MATRIX</span><button class="copy" data-copy="f13" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 13</span><h3>Reset types are not interchangeable</h3><span class="ev typ">GENERALISATION</span><span class="kind">MATRIX</span><button class="copy" data-copy="f13" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f13"></div>
     </section>
 
     <section class="fig" id="f14">
-      <div class="fig-head"><span class="fig-no">FIG 14</span><h3>OEM reset timeline</h3><span class="kind">TIMELINE · SOURCED</span><button class="copy" data-copy="f14" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 14</span><h3>OEM reset timeline</h3><span class="ev doc">DOCUMENTED · OEM SOURCES</span><span class="kind">TIMELINE · SOURCED</span><button class="copy" data-copy="f14" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f14"></div>
       <div class="srcs">
         <table>
@@ -153,14 +163,14 @@
     </section>
 
     <section class="fig" id="f15">
-      <div class="fig-head"><span class="fig-no">FIG 15</span><h3>Why 45 seconds may have worked</h3><span class="kind">TIMELINE</span><button class="copy" data-copy="f15" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 15</span><h3>Why 45 seconds may have worked</h3><span class="ev hyp">HYPOTHESIS</span><span class="kind">TIMELINE</span><button class="copy" data-copy="f15" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f15"></div>
     </section>
 
     <h2 class="part">D · Diagnose</h2>
 
     <section class="fig" id="f16">
-      <div class="fig-head"><span class="fig-no">FIG 16</span><h3>Diagnostic decision tree</h3><span class="kind">CLICKABLE</span><button class="reset-tree" type="button">Show incident path</button><button class="copy" data-copy="f16" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 16</span><h3>Diagnostic decision tree</h3><span class="ev hyp">AI-SUGGESTED PROCESS</span><span class="kind">CLICKABLE</span><button class="reset-tree" type="button">Show incident path</button><button class="copy" data-copy="f16" type="button">Copy SVG</button></div>
       <div class="split">
         <div class="viz" data-fig="f16"></div>
         <aside class="info" id="tree-info" aria-live="polite"></aside>
@@ -169,20 +179,20 @@
     </section>
 
     <section class="fig" id="f17">
-      <div class="fig-head"><span class="fig-no">FIG 17</span><h3>Before · reset · after</h3><span class="kind">3-PANEL</span><button class="copy" data-copy="f17" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 17</span><h3>Before · reset · after</h3><span class="ev hyp">OBSERVED + HYPOTHESIS</span><span class="kind">3-PANEL</span><button class="copy" data-copy="f17" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f17"></div>
     </section>
 
     <h2 class="part">E · Explore</h2>
 
     <section class="fig" id="f18">
-      <div class="fig-head"><span class="fig-no">FIG 18</span><h3>Exploded laptop view</h3><span class="kind">ISOMETRIC SVG</span><button class="copy" data-copy="f18" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 18</span><h3>Exploded laptop view</h3><span class="ev ill">ILLUSTRATIVE</span><span class="kind">ISOMETRIC SVG</span><button class="copy" data-copy="f18" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f18"></div>
       <p class="cap">A vector stand-in for the photoreal render. The matching image-generation prompt is in <a href="https://github.com/pavelkondratyukrepo/USB4/blob/main/docs/image-prompts.md">docs/image-prompts.md</a>.</p>
     </section>
 
     <section class="fig" id="f19">
-      <div class="fig-head"><span class="fig-no">FIG 19</span><h3>Interactive motherboard</h3><span class="kind">CLICK ANY PART</span></div>
+      <div class="fig-head"><span class="fig-no">FIG 19</span><h3>Interactive motherboard</h3><span class="ev ill">ILLUSTRATIVE</span><span class="kind">CLICK ANY PART</span></div>
       <div class="controls seg modes" role="group" aria-label="Board mode">
         <button type="button" data-mode="normal">Normal</button><button type="button" data-mode="failure" class="on">Dock failure</button><button type="button" data-mode="restart">Windows restart</button><button type="button" data-mode="hardreset">Hard reset</button><button type="button" data-mode="coldboot">Cold boot</button>
       </div>
@@ -194,7 +204,7 @@
     </section>
 
     <section class="fig" id="f20">
-      <div class="fig-head"><span class="fig-no">FIG 20</span><h3>Power-rail simulator</h3><span class="kind">LIVE SIMULATION</span></div>
+      <div class="fig-head"><span class="fig-no">FIG 20</span><h3>Power-rail simulator</h3><span class="ev ill">CONCEPTUAL MODEL</span><span class="kind">LIVE SIMULATION</span></div>
       <div class="sim" id="sim">
         <div class="sim-btns" role="group" aria-label="Actions">
           <button type="button" data-act="on">System on</button>
@@ -227,27 +237,27 @@
     <h2 class="part">F · Conclusions</h2>
 
     <section class="fig" id="f21">
-      <div class="fig-head"><span class="fig-no">FIG 21</span><h3>Root-cause hypothesis map</h3><span class="kind">CLICK A HYPOTHESIS</span><button class="copy" data-copy="f21" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 21</span><h3>Root-cause hypothesis map</h3><span class="ev hyp">HYPOTHESIS RANKING</span><span class="kind">CLICK A HYPOTHESIS</span><button class="copy" data-copy="f21" type="button">Copy SVG</button></div>
       <div class="split">
         <div class="viz" data-fig="f21"></div>
         <aside class="info" id="hypo-info" aria-live="polite"></aside>
       </div>
-      <p class="cap">Green means consistent with the evidence, not proven. The dock’s absence from Device Manager moved the scoring. USB 2.0 needs no Alt Mode and bypasses the mux, so Alt Mode or the mux alone can’t explain it. The break is earlier, in the connection state the PD controller reports.</p>
+      <p class="cap">Green means consistent with the evidence, not proven. The dock’s absence from Device Manager moved the scoring. USB 2.0 needs no Alt Mode and bypasses the mux, so Alt Mode or the mux alone can’t explain it. It points earlier, most likely to the connection state the PD controller reports. That is still a hypothesis.</p>
     </section>
 
     <section class="fig" id="f22">
-      <div class="fig-head"><span class="fig-no">FIG 22</span><h3>Myth vs reality</h3><span class="kind">FLIP CARDS</span></div>
+      <div class="fig-head"><span class="fig-no">FIG 22</span><h3>Myth vs reality</h3><span class="ev typ">GENERAL PRINCIPLE</span><span class="kind">FLIP CARDS</span></div>
       <div class="cards" id="cards"></div>
     </section>
 
     <section class="fig master-sec" id="master">
-      <div class="fig-head"><span class="fig-no">★</span><h3>Master infographic</h3><span class="kind">2400 px POSTER</span><button class="copy" data-copy="master" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">★</span><h3>Master infographic</h3><span class="ev hyp">SUMMARY · HYPOTHESIS</span><span class="kind">2400 px POSTER</span><button class="copy" data-copy="master" type="button">Copy SVG</button></div>
       <div class="viz poster" data-fig="master"></div>
       <p class="cap">Download the poster as <a href="export/master-infographic.svg">SVG</a>, <a href="export/master-infographic.png">PNG (4800 px)</a> or <a href="export/master-infographic.pdf">PDF</a>. Every figure is also exported as its own SVG and PNG in the <code>export/</code> folder.</p>
     </section>
   </main>
 </div>
 <footer class="foot wrap">
-  <p>Sources: ACPI 6.5 · HP USB-C Dock G5 datasheet and SoftPaq firmware notes · HP, Dell, Lenovo and Microsoft support documents (linked under FIG 14). All board-level drawings are representative.</p>
+  <p>AI-assisted analysis (Claude) of a real incident: the explanation is a hypothesis, not a confirmed root cause. Sources: ACPI 6.5 · HP USB-C Dock G5 datasheet and SoftPaq firmware notes · HP, Dell, Lenovo and Microsoft support documents (linked under FIG 14). All board-level drawings are representative.</p>
 </footer>
 <div class="tooltip" id="tooltip" hidden></div>

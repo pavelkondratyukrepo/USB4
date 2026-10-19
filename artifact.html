@@ -47,6 +47,14 @@ h1 span { color: var(--pwr); text-shadow: 0 0 22px rgba(61, 220, 132, .35); }
 .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); }
 .legend i { display: inline-block; width: 22px; height: 6px; border-radius: 3px; margin-right: 7px; vertical-align: middle; }
 
+/* analysis status + evidence tags */
+.status { border: 1.5px dashed var(--warn); border-radius: 10px; padding: 14px 16px; background: rgba(255, 159, 26, .06); display: grid; gap: 8px; max-width: 110ch; }
+.status-h { font-family: var(--f-mono); font-size: 12px; font-weight: 700; letter-spacing: .14em; color: var(--warn); }
+.status p { margin: 0; font-size: 14px; color: #d9e3dc; }
+.ev-key { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; align-items: center; font-size: 13px; color: var(--ink-2); }
+.ev { display: inline-block; justify-self: start; font-family: var(--f-mono); font-size: 10.5px; font-weight: 700; letter-spacing: .1em; padding: 2px 8px; border-radius: 4px; border: 1px solid currentColor; white-space: nowrap; }
+.ev.obs { color: var(--silk); } .ev.doc { color: var(--pwr); } .ev.typ { color: var(--main); } .ev.ill { color: #9fb0a6; } .ev.hyp { color: var(--warn); border-style: dashed; }
+
 /* layout */
 .layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 28px; padding-block: 28px; }
 .toc { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; max-height: 100vh; overflow-y: auto; padding-block: 8px; display: flex; flex-direction: column; gap: 1px; font-family: var(--f-mono); font-size: 12.5px; }
@@ -161,7 +169,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
 </style>
 <header class="hero">
   <div class="wrap">
-    <div class="eyebrow">ENGINEERING TRAINING MODULE · USB-C / PLATFORM POWER · REV A</div>
+    <div class="eyebrow">ENGINEERING TRAINING MODULE · USB-C / PLATFORM POWER · AI-ASSISTED HYPOTHESIS · REV B</div>
     <h1>USB-C Dock Failure, <span>Explained</span></h1>
     <p class="lede">HP USB-C Dock G5 on a Windows business laptop. Charging kept working, but USB, Ethernet and displays vanished, and the dock didn’t appear in Device Manager at all. A restart didn’t help. Holding the power button for about 45 seconds brought everything back.</p>
     <div class="incident" aria-label="Incident summary">
@@ -175,13 +183,23 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
         <span class="pill ok">CHARGING ✓</span><span class="pill ok">USB · LAN ✓</span><span class="pill ok">DISPLAYS ✓</span>
       </div>
     </div>
-    <p class="caveat">Representative architecture, not one specific laptop. The reset narrows the suspects. It does not prove which controller failed.</p>
+    <aside class="status" aria-label="Status of this analysis">
+      <div class="status-h">HYPOTHESIS · AI-ASSISTED ANALYSIS</div>
+      <p>The incident observations are real. The explanation is an AI-assisted analysis (Claude), built from those observations and public documentation. It is a <b>hypothesis, not a confirmed root cause</b>. No logs were captured and nothing was measured on the actual laptop or dock, and no HP or platform engineer has reviewed it. Board-level drawings are representative, not this exact laptop.</p>
+      <div class="ev-key">
+        <span class="ev obs">OBSERVED</span><span>what actually happened</span>
+        <span class="ev doc">DOCUMENTED</span><span>from a spec or OEM source</span>
+        <span class="ev typ">TYPICAL DESIGN</span><span>how laptops usually work; varies by model</span>
+        <span class="ev ill">ILLUSTRATIVE</span><span>representative drawing or values</span>
+        <span class="ev hyp">HYPOTHESIS</span><span>inferred explanation, not proven</span>
+      </div>
+    </aside>
     <div class="legend" aria-label="Colour code">
       <span><i style="background:var(--pwr)"></i>power / working</span>
       <span><i style="background:var(--aux)"></i>auxiliary / always-on</span>
       <span><i style="background:var(--main)"></i>main system rails</span>
       <span><i style="background:var(--io)"></i>USB-C / high-speed data</span>
-      <span><i style="background:var(--fail)"></i>failure / stuck</span>
+      <span><i style="background:var(--fail)"></i>suspected failure / stuck</span>
       <span><i style="background:var(--off)"></i>powered down</span>
     </div>
   </div>
@@ -207,19 +225,19 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     <h2 class="part">A · The hardware</h2>
 
     <section class="fig" id="f01">
-      <div class="fig-head"><span class="fig-no">FIG 01</span><h3>Master PCB motherboard</h3><span class="kind">SVG · incident state</span><button class="copy" data-copy="f01" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 01</span><h3>Master PCB motherboard</h3><span class="ev ill">ILLUSTRATIVE</span><span class="kind">SVG · incident state</span><button class="copy" data-copy="f01" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f01"></div>
-      <p class="cap">Power enters at J1, becomes VSYS, then splits into always-on (yellow) and main (blue) rails. The red parts are the PD controller, mux and retimer, which sit on the path shared by USB and DisplayPort. The power button is only a dashed logic line to the EC.</p>
+      <p class="cap">Power enters at J1, becomes VSYS, then splits into always-on (yellow) and main (blue) rails. Red marks the suspected area: the PD controller, mux and retimer, which sit on the path shared by USB and DisplayPort. The power button is only a dashed logic line to the EC.</p>
     </section>
 
     <section class="fig" id="f02">
-      <div class="fig-head"><span class="fig-no">FIG 02</span><h3>USB-C connector cutaway</h3><span class="kind">SVG</span><button class="copy" data-copy="f02" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 02</span><h3>USB-C connector cutaway</h3><span class="ev doc">DOCUMENTED · USB-C SPEC</span><span class="kind">SVG</span><button class="copy" data-copy="f02" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f02"></div>
       <p class="cap">USB-C Type-C receptacle pinout (A1–A12 / B12–B1). The four SuperSpeed pairs are shared: the mux gives them to USB 3 or to DisplayPort.</p>
     </section>
 
     <section class="fig" id="f03">
-      <div class="fig-head"><span class="fig-no">FIG 03</span><h3>HP USB-C Dock G5 cutaway</h3><span class="kind">SVG · verified vs representative</span><button class="copy" data-copy="f03" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 03</span><h3>HP USB-C Dock G5 cutaway</h3><span class="ev doc">DOCUMENTED + ILLUSTRATIVE</span><span class="kind">SVG · verified vs representative</span><button class="copy" data-copy="f03" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f03"></div>
       <p class="cap">Ports, power levels and the three firmware-updatable controllers come from HP’s datasheet and SoftPaq notes. The hub, NIC, audio and lane-split blocks are shown dashed because their chips aren’t publicly confirmed.</p>
     </section>
@@ -227,12 +245,12 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     <h2 class="part">B · The incident</h2>
 
     <section class="fig" id="f04">
-      <div class="fig-head"><span class="fig-no">FIG 04</span><h3>Normal USB-C bring-up</h3><span class="kind">ANIMATED</span><button class="play" data-play="f04" type="button">▶ Play sequence</button><button class="copy" data-copy="f04" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 04</span><h3>Normal USB-C bring-up</h3><span class="ev typ">TYPICAL SEQUENCE</span><span class="kind">ANIMATED</span><button class="play" data-play="f04" type="button">▶ Play sequence</button><button class="copy" data-copy="f04" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f04"></div>
     </section>
 
     <section class="fig" id="f05">
-      <div class="fig-head"><span class="fig-no">FIG 05</span><h3>Failure state</h3><span class="kind">SVG</span><button class="copy" data-copy="f05" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 05</span><h3>Failure state: most likely break point</h3><span class="ev hyp">HYPOTHESIS</span><span class="kind">SVG</span><button class="copy" data-copy="f05" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f05"></div>
       <p class="cap">Next time, before resetting: open Device Manager → View → Devices by connection, and check “USB Connector Managers” for an error on the UCM-UCSI device. Then unplug and replug the dock once. If a replug alone fixes it, the stuck state was cleared by a detach rather than by power loss.</p>
     </section>
@@ -240,28 +258,28 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     <h2 class="part">C · The reset</h2>
 
     <section class="fig" id="f06">
-      <div class="fig-head"><span class="fig-no">FIG 06</span><h3>Why a Windows restart may not fix it</h3><span class="kind">SPLIT SCREEN</span><button class="copy" data-copy="f06" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 06</span><h3>Why a Windows restart may not fix it</h3><span class="ev hyp">HYPOTHESIS</span><span class="kind">SPLIT SCREEN</span><button class="copy" data-copy="f06" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f06"></div>
       <p class="cap">Restart is a warm reset of the CPU and OS. With Fast Startup, Windows “Shut down” is a hybrid hibernate. With a dock attached, the PD controller must stay powered to keep charging, so neither path is guaranteed to clear it.</p>
     </section>
 
     <section class="fig" id="f07">
-      <div class="fig-head"><span class="fig-no">FIG 07</span><h3>Power rail map</h3><span class="kind">SVG</span><button class="copy" data-copy="f07" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 07</span><h3>Power rail map</h3><span class="ev ill">ILLUSTRATIVE</span><span class="kind">SVG</span><button class="copy" data-copy="f07" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f07"></div>
     </section>
 
     <section class="fig" id="f08">
-      <div class="fig-head"><span class="fig-no">FIG 08</span><h3>“Off” does not always mean 0 V</h3><span class="kind">SVG</span><button class="copy" data-copy="f08" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 08</span><h3>“Off” does not always mean 0 V</h3><span class="ev typ">TYPICAL DESIGN</span><span class="kind">SVG</span><button class="copy" data-copy="f08" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f08"></div>
     </section>
 
     <section class="fig" id="f09">
-      <div class="fig-head"><span class="fig-no">FIG 09</span><h3>Power-button electrical path</h3><span class="kind">MYTH VS REALITY</span><button class="copy" data-copy="f09" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 09</span><h3>Power-button electrical path</h3><span class="ev typ">TYPICAL DESIGN</span><span class="kind">MYTH VS REALITY</span><button class="copy" data-copy="f09" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f09"></div>
     </section>
 
     <section class="fig" id="f10">
-      <div class="fig-head"><span class="fig-no">FIG 10</span><h3>Capacitor / rail voltage decay</h3><span class="kind">INTERACTIVE CHART</span><button class="copy" data-copy="f10" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 10</span><h3>Capacitor / rail voltage decay</h3><span class="ev ill">ILLUSTRATIVE MODEL</span><span class="kind">INTERACTIVE CHART</span><button class="copy" data-copy="f10" type="button">Copy SVG</button></div>
       <div class="controls">
         <label for="vth">Retention threshold <output id="vth-out">1.20 V</output></label>
         <input id="vth" type="range" min="0.5" max="2.8" step="0.05" value="1.2">
@@ -273,7 +291,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     </section>
 
     <section class="fig" id="f11">
-      <div class="fig-head"><span class="fig-no">FIG 11</span><h3>What actually discharges the rail</h3><span class="kind">INTERACTIVE</span><button class="copy" data-copy="f11" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 11</span><h3>What actually discharges the rail</h3><span class="ev typ">TYPICAL DESIGN</span><span class="kind">INTERACTIVE</span><button class="copy" data-copy="f11" type="button">Copy SVG</button></div>
       <div class="controls seg" role="group" aria-label="Regulator state">
         <button type="button" data-reg="on">Regulator ON</button><button type="button" data-reg="off" class="on">Regulator OFF</button>
       </div>
@@ -281,7 +299,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     </section>
 
     <section class="fig" id="f12">
-      <div class="fig-head"><span class="fig-no">FIG 12</span><h3>Volatile vs non-volatile state</h3><span class="kind">INTERACTIVE</span><button class="copy" data-copy="f12" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 12</span><h3>Volatile vs non-volatile state</h3><span class="ev typ">GENERAL PRINCIPLE</span><span class="kind">INTERACTIVE</span><button class="copy" data-copy="f12" type="button">Copy SVG</button></div>
       <div class="controls seg" role="group" aria-label="Power domain">
         <button type="button" data-dom="on">Domain powered</button><button type="button" data-dom="off" class="on">Domain collapses</button>
       </div>
@@ -289,12 +307,12 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     </section>
 
     <section class="fig" id="f13">
-      <div class="fig-head"><span class="fig-no">FIG 13</span><h3>Reset types are not interchangeable</h3><span class="kind">MATRIX</span><button class="copy" data-copy="f13" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 13</span><h3>Reset types are not interchangeable</h3><span class="ev typ">GENERALISATION</span><span class="kind">MATRIX</span><button class="copy" data-copy="f13" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f13"></div>
     </section>
 
     <section class="fig" id="f14">
-      <div class="fig-head"><span class="fig-no">FIG 14</span><h3>OEM reset timeline</h3><span class="kind">TIMELINE · SOURCED</span><button class="copy" data-copy="f14" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 14</span><h3>OEM reset timeline</h3><span class="ev doc">DOCUMENTED · OEM SOURCES</span><span class="kind">TIMELINE · SOURCED</span><button class="copy" data-copy="f14" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f14"></div>
       <div class="srcs">
         <table>
@@ -314,14 +332,14 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     </section>
 
     <section class="fig" id="f15">
-      <div class="fig-head"><span class="fig-no">FIG 15</span><h3>Why 45 seconds may have worked</h3><span class="kind">TIMELINE</span><button class="copy" data-copy="f15" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 15</span><h3>Why 45 seconds may have worked</h3><span class="ev hyp">HYPOTHESIS</span><span class="kind">TIMELINE</span><button class="copy" data-copy="f15" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f15"></div>
     </section>
 
     <h2 class="part">D · Diagnose</h2>
 
     <section class="fig" id="f16">
-      <div class="fig-head"><span class="fig-no">FIG 16</span><h3>Diagnostic decision tree</h3><span class="kind">CLICKABLE</span><button class="reset-tree" type="button">Show incident path</button><button class="copy" data-copy="f16" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 16</span><h3>Diagnostic decision tree</h3><span class="ev hyp">AI-SUGGESTED PROCESS</span><span class="kind">CLICKABLE</span><button class="reset-tree" type="button">Show incident path</button><button class="copy" data-copy="f16" type="button">Copy SVG</button></div>
       <div class="split">
         <div class="viz" data-fig="f16"></div>
         <aside class="info" id="tree-info" aria-live="polite"></aside>
@@ -330,20 +348,20 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     </section>
 
     <section class="fig" id="f17">
-      <div class="fig-head"><span class="fig-no">FIG 17</span><h3>Before · reset · after</h3><span class="kind">3-PANEL</span><button class="copy" data-copy="f17" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 17</span><h3>Before · reset · after</h3><span class="ev hyp">OBSERVED + HYPOTHESIS</span><span class="kind">3-PANEL</span><button class="copy" data-copy="f17" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f17"></div>
     </section>
 
     <h2 class="part">E · Explore</h2>
 
     <section class="fig" id="f18">
-      <div class="fig-head"><span class="fig-no">FIG 18</span><h3>Exploded laptop view</h3><span class="kind">ISOMETRIC SVG</span><button class="copy" data-copy="f18" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 18</span><h3>Exploded laptop view</h3><span class="ev ill">ILLUSTRATIVE</span><span class="kind">ISOMETRIC SVG</span><button class="copy" data-copy="f18" type="button">Copy SVG</button></div>
       <div class="viz" data-fig="f18"></div>
       <p class="cap">A vector stand-in for the photoreal render. The matching image-generation prompt is in <a href="https://github.com/pavelkondratyukrepo/USB4/blob/main/docs/image-prompts.md">docs/image-prompts.md</a>.</p>
     </section>
 
     <section class="fig" id="f19">
-      <div class="fig-head"><span class="fig-no">FIG 19</span><h3>Interactive motherboard</h3><span class="kind">CLICK ANY PART</span></div>
+      <div class="fig-head"><span class="fig-no">FIG 19</span><h3>Interactive motherboard</h3><span class="ev ill">ILLUSTRATIVE</span><span class="kind">CLICK ANY PART</span></div>
       <div class="controls seg modes" role="group" aria-label="Board mode">
         <button type="button" data-mode="normal">Normal</button><button type="button" data-mode="failure" class="on">Dock failure</button><button type="button" data-mode="restart">Windows restart</button><button type="button" data-mode="hardreset">Hard reset</button><button type="button" data-mode="coldboot">Cold boot</button>
       </div>
@@ -355,7 +373,7 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     </section>
 
     <section class="fig" id="f20">
-      <div class="fig-head"><span class="fig-no">FIG 20</span><h3>Power-rail simulator</h3><span class="kind">LIVE SIMULATION</span></div>
+      <div class="fig-head"><span class="fig-no">FIG 20</span><h3>Power-rail simulator</h3><span class="ev ill">CONCEPTUAL MODEL</span><span class="kind">LIVE SIMULATION</span></div>
       <div class="sim" id="sim">
         <div class="sim-btns" role="group" aria-label="Actions">
           <button type="button" data-act="on">System on</button>
@@ -388,28 +406,28 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
     <h2 class="part">F · Conclusions</h2>
 
     <section class="fig" id="f21">
-      <div class="fig-head"><span class="fig-no">FIG 21</span><h3>Root-cause hypothesis map</h3><span class="kind">CLICK A HYPOTHESIS</span><button class="copy" data-copy="f21" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">FIG 21</span><h3>Root-cause hypothesis map</h3><span class="ev hyp">HYPOTHESIS RANKING</span><span class="kind">CLICK A HYPOTHESIS</span><button class="copy" data-copy="f21" type="button">Copy SVG</button></div>
       <div class="split">
         <div class="viz" data-fig="f21"></div>
         <aside class="info" id="hypo-info" aria-live="polite"></aside>
       </div>
-      <p class="cap">Green means consistent with the evidence, not proven. The dock’s absence from Device Manager moved the scoring. USB 2.0 needs no Alt Mode and bypasses the mux, so Alt Mode or the mux alone can’t explain it. The break is earlier, in the connection state the PD controller reports.</p>
+      <p class="cap">Green means consistent with the evidence, not proven. The dock’s absence from Device Manager moved the scoring. USB 2.0 needs no Alt Mode and bypasses the mux, so Alt Mode or the mux alone can’t explain it. It points earlier, most likely to the connection state the PD controller reports. That is still a hypothesis.</p>
     </section>
 
     <section class="fig" id="f22">
-      <div class="fig-head"><span class="fig-no">FIG 22</span><h3>Myth vs reality</h3><span class="kind">FLIP CARDS</span></div>
+      <div class="fig-head"><span class="fig-no">FIG 22</span><h3>Myth vs reality</h3><span class="ev typ">GENERAL PRINCIPLE</span><span class="kind">FLIP CARDS</span></div>
       <div class="cards" id="cards"></div>
     </section>
 
     <section class="fig master-sec" id="master">
-      <div class="fig-head"><span class="fig-no">★</span><h3>Master infographic</h3><span class="kind">2400 px POSTER</span><button class="copy" data-copy="master" type="button">Copy SVG</button></div>
+      <div class="fig-head"><span class="fig-no">★</span><h3>Master infographic</h3><span class="ev hyp">SUMMARY · HYPOTHESIS</span><span class="kind">2400 px POSTER</span><button class="copy" data-copy="master" type="button">Copy SVG</button></div>
       <div class="viz poster" data-fig="master"></div>
       <p class="cap">Download the poster as <a href="export/master-infographic.svg">SVG</a>, <a href="export/master-infographic.png">PNG (4800 px)</a> or <a href="export/master-infographic.pdf">PDF</a>. Every figure is also exported as its own SVG and PNG in the <code>export/</code> folder.</p>
     </section>
   </main>
 </div>
 <footer class="foot wrap">
-  <p>Sources: ACPI 6.5 · HP USB-C Dock G5 datasheet and SoftPaq firmware notes · HP, Dell, Lenovo and Microsoft support documents (linked under FIG 14). All board-level drawings are representative.</p>
+  <p>AI-assisted analysis (Claude) of a real incident: the explanation is a hypothesis, not a confirmed root cause. Sources: ACPI 6.5 · HP USB-C Dock G5 datasheet and SoftPaq firmware notes · HP, Dell, Lenovo and Microsoft support documents (linked under FIG 14). All board-level drawings are representative.</p>
 </footer>
 <div class="tooltip" id="tooltip" hidden></div>
 
@@ -513,6 +531,12 @@ function statusPill(x, y, kind, ok, label, w = 170) {
 function tag(x, y, s, color, fill = P.bg, cls = 'ts') {
   const w = s.length * 6.4 + 14;
   return `<g transform="translate(${x},${y})"><rect x="0" y="-12" width="${w}" height="17" rx="3" fill="${fill}" stroke="${color}" stroke-width="1"/>${T(7, 0.5, s, cls, `style="fill:${color}"`)}</g>`;
+}
+
+/* evidence-status pill drawn in a figure's top-right corner */
+function evTag(w, label = 'HYPOTHESIS · AI-ASSISTED ANALYSIS', color = P.warn, y = 18) {
+  const tw = label.length * 6.6 + 26;
+  return `<g transform="translate(${w - tw - 24},${y})"><rect width="${tw}" height="24" rx="12" fill="${P.bg}" stroke="${color}" stroke-width="1.4" stroke-dasharray="5 3"/>` + T(13, 16, label, 'ts tw', `style="fill:${color}"`) + `</g>`;
 }
 
 /* ---------- PCB part packages ---------- */
@@ -620,12 +644,12 @@ const BOARD_MODES = {
     comp: { pd: 'ok', mux: 'ok', rt: 'ok' }, ep: [true, true, true], flow: true
   },
   failure: {
-    label: 'DOCK FAILURE', note: 'Power contract fine. Connection / data-role state wrong: nothing enumerates, not even USB 2.0.',
+    label: 'DOCK FAILURE', note: 'Hypothesis: power contract fine, but the USB connection / data-role state is wrong, so nothing enumerates, not even USB 2.0.',
     net: { pdrail: 'aux', vbus: 'pwr', vbat: 'pwr', vsys: 'pwr', aux: 'aux', main: 'main', ior: 'main', vcore: 'main', hs: 'fail', cc: 'io', sig: 'sig', pbtn: 'sig' },
     comp: { pd: 'fail', mux: 'fail', rt: 'fail' }, ep: [true, false, false], flow: true
   },
   restart: {
-    label: 'WINDOWS RESTART', note: 'CPU + OS reset. Always-on domain and its stuck state never lose power.',
+    label: 'WINDOWS RESTART', note: 'CPU + OS reset. The always-on domain (and, per the hypothesis, its stuck state) never loses power.',
     net: { pdrail: 'aux', vbus: 'pwr', vbat: 'pwr', vsys: 'pwr', aux: 'aux', main: 'main', ior: 'main', vcore: 'warn', hs: 'fail', cc: 'io', sig: 'sig', pbtn: 'sig' },
     comp: { pd: 'fail', mux: 'fail', rt: 'fail', cpu: 'warn', usbctl: 'warn' }, ep: [true, false, false], flow: true
   },
@@ -665,7 +689,7 @@ function boardSVG(mode = 'failure', opt = {}) {
   let s = '';
   /* legend + title strip */
   if (opt.legend !== false) {
-    const L = [['pwr', 'POWER SOURCE / WORKING'], ['aux', 'ALWAYS-ON (AUX)'], ['main', 'MAIN (S0) RAILS'], ['io', 'USB-C HIGH-SPEED I/O'], ['fail', 'FAILED / STUCK'], ['off', 'POWERED DOWN']];
+    const L = [['pwr', 'POWER SOURCE / WORKING'], ['aux', 'ALWAYS-ON (AUX)'], ['main', 'MAIN (S0) RAILS'], ['io', 'USB-C HIGH-SPEED I/O'], ['fail', 'SUSPECTED STUCK'], ['off', 'POWERED DOWN']];
     L.forEach(([k, l], i) => { const x = 70 + i * 180; s += `<rect x="${x}" y="22" width="22" height="6" rx="3" fill="${ROLE[k]}" ${k !== 'off' ? 'filter="url(#glow)"' : ''}/>` + T(x + 30, 30, l, 'ts c-dim'); });
     s += T(1150, 52, `MODE · ${M.label}`, 'end tw', `style="fill:${mode === 'normal' || mode === 'coldboot' ? P.pwr : mode === 'hardreset' ? P.aux : P.fail}"`);
   }
@@ -742,14 +766,14 @@ function boardSVG(mode = 'failure', opt = {}) {
   /* ---------- endpoint status ---------- */
   s += T(930, 662, 'AT THE DOCK', 'ts c-dim tw');
   s += statusPill(930, 672, 'pwr', M.ep[0], 'CHARGING', 210) + statusPill(930, 714, 'usb', M.ep[1], 'USB · ETHERNET', 210) + statusPill(930, 756, 'dp', M.ep[2], 'DISPLAYS', 210);
-  if (opt.disclaimer !== false) s += T(70, 822, 'Representative modern business-laptop architecture — exact implementation varies by model.', 'ts c-dim');
+  if (opt.disclaimer !== false) s += T(70, 822, 'Representative modern business-laptop architecture — exact implementation varies by model.' + (mode === 'failure' || mode === 'restart' ? ' Red = suspected area (hypothesis).' : ''), 'ts c-dim');
   return svgWrap(1200, 832, s, 'PCB-style laptop motherboard, mode ' + M.label, 'board');
 }
 
 /* ---------- FIG 19 component dossier ---------- */
 const PART_INFO = {
   port: { does: 'Passive 24-pin receptacle. Carries VBUS, CC1/CC2, USB 2.0 D+/D−, four SuperSpeed pairs and SBU1/2 at once.', domain: ['none — passive'], shut: ['n/a'], stuck: 'Cannot hold logic state. Debris, wear or a half-seated plug can break individual pins while power still flows.', reset: ['NO effect', 'off'] },
-  pd: { does: 'USB-C port controller. Detects attach on CC, negotiates the PD power contract, runs Alt Mode discovery (Discover Identity → SVIDs → Modes → Enter Mode) and tells the mux what to route.', domain: ['3V3_AUX', 'or VBUS (dead-battery)'], shut: ['OFTEN YES', 'aux'], stuck: 'The power contract can stay valid while the connection / data-role state is wrong. If the host is never told “USB connected”, even USB 2.0 stays off — charging works, nothing enumerates, the dock is absent from Device Manager. Fits the incident.', reset: ['POSSIBLY', 'warn'], resetNote: 'If its supply collapses, or the EC/sequencer re-initialises it during cold boot. Not guaranteed while a dock keeps VBUS present.' },
+  pd: { does: 'USB-C port controller. Detects attach on CC, negotiates the PD power contract, runs Alt Mode discovery (Discover Identity → SVIDs → Modes → Enter Mode) and tells the mux what to route.', domain: ['3V3_AUX', 'or VBUS (dead-battery)'], shut: ['OFTEN YES', 'aux'], stuck: 'The power contract can stay valid while the connection / data-role state is wrong. If the host is never told “USB connected”, even USB 2.0 stays off — charging works, nothing enumerates, the dock is absent from Device Manager. Consistent with the incident (hypothesis, not confirmed).', reset: ['POSSIBLY', 'warn'], resetNote: 'If its supply collapses, or the EC/sequencer re-initialises it during cold boot. Not guaranteed while a dock keeps VBUS present.' },
   mux: { does: 'Routes the four SuperSpeed lane pairs to USB 3 or DisplayPort according to plug orientation and the DP pin assignment (C = 4 DP lanes, D = 2 DP + USB 3).', domain: ['I/O rail', 'S0 / platform-specific'], shut: ['USUALLY NO', 'off'], stuck: 'Lanes routed wrong or not at all: SuperSpeed USB and DP vanish — but USB 2.0 bypasses the mux, so the dock would still appear in Device Manager. Weak fit alone.', reset: ['LIKELY', 'pwr'], resetNote: 'Loses its register configuration when its rail drops; rewritten by the PD controller after boot.' },
   rt: { does: 'Retimer / redriver. Recovers and re-transmits multi-gigabit lanes so they survive board + cable loss. Present on many USB4/TBT designs; plain USB-C designs may use a redriver or nothing.', domain: ['I/O rail', 'S0'], shut: ['USUALLY NO', 'off'], stuck: 'Lane training fails: links never come up even though the connector is fine.', reset: ['LIKELY', 'pwr'] },
   chg: { does: 'Narrow-VDC charger + power path. Picks VBUS or battery, builds the system bus (VSYS), charges the pack. Controlled by the EC over SMBus.', domain: ['VBUS in', 'VSYS out ≈ VBAT'], shut: ['YES', 'pwr'], stuck: 'Charging would misbehave. In this incident charging worked — evidence the charger path was healthy.', reset: ['NOT TYPICALLY', 'off'] },
@@ -830,7 +854,7 @@ function fig02() {
   s += bigMark(1088, 270, false) + T(1110, 334, 'MISSING', 'mid ts tw c-fail');
   s += bigMark(1088, 432, false) + T(1110, 496, 'MISSING', 'mid ts tw c-fail');
   s += `<rect x="660" y="540" width="500" height="54" rx="6" fill="rgba(255,79,79,.08)" stroke="${P.fail}" stroke-opacity=".6"/>`;
-  s += T(680, 562, 'Charging proves VBUS + CC + PD are healthy.', 'ts tw') + T(680, 580, 'It proves nothing about the data and display paths.', 'ts c-dim');
+  s += T(680, 562, 'Charging shows VBUS + CC + PD were working.', 'ts tw') + T(680, 580, 'It says nothing about the data and display paths.', 'ts c-dim');
   return svgWrap(1200, 620, s, 'USB-C connector cutaway: power works, USB data and DisplayPort missing');
 }
 
@@ -925,7 +949,7 @@ function fig04() {
   return svgWrap(1200, 580, s, 'Normal USB-C dock bring-up sequence, ten stages', 'seq');
 }
 function fig05() {
-  let s = TH(40, 50, 'WHERE THE CHAIN BROKE', 'txl') + T(40, 72, 'Power contract completed (charging proves it). The dock never appeared in Device Manager, so the break sits before ANY USB enumeration — USB 2.0 included.', 'ts c-dim');
+  let s = TH(40, 50, 'WHERE THE CHAIN MOST LIKELY BROKE', 'txl') + T(40, 72, 'Observed: charging worked; the dock never appeared in Device Manager. Inferred: the break was probably before ANY USB enumeration, USB 2.0 included.', 'ts c-dim') + evTag(1200);
   const nodeBox = (x, y, w, title, ok, role, fs = 21) => {
     const c = ok === true ? (ROLE[role] || role) : ok === 'warn' ? P.warn : ok === 'off' ? P.off : P.fail;
     return `<rect x="${x}" y="${y}" width="${w}" height="64" rx="10" fill="${ok === 'warn' ? 'url(#hatchRed)' : P.bg}" stroke="${c}" stroke-width="2.5" ${ok === 'warn' ? 'class="pulse"' : ''} ${ok === 'off' ? 'stroke-dasharray="6 5"' : 'filter="url(#glow)"'}/>` +
@@ -939,7 +963,7 @@ function fig05() {
   s += `<rect x="650" y="214" width="320" height="72" rx="36" fill="${P.bg}" stroke="${P.pwr}" stroke-width="2.5" filter="url(#glow)"/>` + icon('i-bolt', 674, 232, 36, P.pwr) + TH(722, 262, 'CHARGING', '', 'style="font-size:22px"') + bigMark(910, 228, true, 44);
   s += arrow('M270,282 V330', P.warn, 3);
   s += nodeBox(80, 334, 560, 'USB CONNECTION / DATA-ROLE STATE', 'warn', 'pwr', 20);
-  s += TH(170, 432, 'STUCK', '', `style="font-size:30px;fill:${P.fail}" filter="url(#glow)"`) + T(270, 418, 'PD controller (via EC) never reports a USB connection,', 'ts c-dim') + T(270, 434, 'so the host never enables the port’s USB 2.0 or USB 3', 'ts c-dim');
+  s += TH(170, 432, 'STUCK?', '', `style="font-size:30px;fill:${P.fail}" filter="url(#glow)"`) + T(292, 418, 'Hypothesis: PD controller (via EC) never', 'ts c-dim') + T(292, 434, 'reported a USB connection to the host', 'ts c-dim');
   // downstream: USB 2 path, Alt Mode path
   s += arrow('M150,398 V454', 'fail', 2.5, 'stroke-dasharray="6 5"') + arrow('M620,398 V454', 'fail', 2.5, 'stroke-dasharray="6 5"');
   s += nodeBox(80, 458, 380, 'USB 2.0 ENUMERATION', 'off', 'io', 18) + nodeBox(480, 458, 330, 'ALT MODE · MUX · DP', 'off', 'io', 18);
@@ -947,7 +971,7 @@ function fig05() {
   s += arrow('M300,522 C300,600 560,600 646,600', 'fail', 2.5) + arrow('M810,490 C840,490 850,600 860,610', 'fail', 2.5);
   s += `<rect x="650" y="568" width="250" height="64" rx="32" fill="${P.bg}" stroke="${P.fail}" stroke-width="2.5"/>` + icon('i-usb', 670, 584, 32, P.ink) + TH(712, 610, 'USB · LAN', '', 'style="font-size:20px"') + bigMark(846, 580, false, 40);
   s += `<rect x="910" y="568" width="250" height="64" rx="32" fill="${P.bg}" stroke="${P.fail}" stroke-width="2.5"/>` + icon('i-mon', 930, 584, 32, P.ink) + TH(972, 610, 'DISPLAYS', '', 'style="font-size:20px"') + bigMark(1106, 580, false, 40);
-  s += `<g transform="translate(1000,110)"><rect width="170" height="420" rx="8" fill="#0b1712" stroke="${P.line}"/>` + TL(14, 28, 'WHY THIS SHAPE\nMATTERS\n\nIf only Alt Mode\nhad failed, USB 2.0\nwould still work and\nthe dock would show\na Billboard device.\n\nNothing showed up,\nso the stuck state\nsits upstream of\nboth paths.', 17, 'ts', 'style="fill:#cfdcd2"') + `</g>`;
+  s += `<g transform="translate(1000,110)"><rect width="170" height="420" rx="8" fill="#0b1712" stroke="${P.line}"/>` + TL(14, 28, 'THE REASONING\n\nIf only Alt Mode\nhad failed, USB 2.0\nwould normally still\nwork and a compliant\ndock would show a\nBillboard device.\n\nNothing showed up,\nwhich points to a\nstuck state upstream\nof both paths.\n\nInference, not proof.', 17, 'ts', 'style="fill:#cfdcd2"') + `</g>`;
   // evidence strip: Device Manager
   const y0 = 670;
   s += `<rect x="40" y="${y0}" width="1130" height="250" rx="10" fill="#08130e" stroke="${P.line}"/>` + T(60, y0 + 28, 'EVIDENCE · WINDOWS DEVICE MANAGER (View → Devices by connection)', 'ts tw c-aux');
@@ -957,8 +981,8 @@ function fig05() {
     return g;
   };
   s += dm(60, 'IF ONLY ALT MODE / LANES HAD FAILED (expected)', [[0, 'USB xHCI controller → Type-C port'], [1, 'Generic USB hub (dock, USB 2.0 side)'], [2, 'USB Billboard device  ← “display connection may be limited”', P.aux], [2, 'Dock USB 2.0 devices (management, audio …)'], [0, 'USB Connector Managers → UCM-UCSI ACPI device'], [0, 'no DisplayPort monitors · no USB 3 hub', P.ink2]], true);
-  s += dm(630, 'OBSERVED IN THIS INCIDENT', [[0, 'USB xHCI controller → Type-C port'], [1, '(nothing attached — no hub, no Billboard,', P.fail], [1, ' no Ethernet, no audio, no dock device)', P.fail], [0, 'Charging indicator: ON', P.pwr], [0, '→ break is before USB 2.0 enumeration', P.aux]], false);
-  return svgWrap(1200, 940, s, 'Failure state: charging works, USB connection state stuck before any USB enumeration, dock absent from Device Manager');
+  s += dm(630, 'OBSERVED IN THIS INCIDENT (as reported)', [[0, 'USB xHCI controller → Type-C port'], [1, '(dock not detected — no hub, no Billboard,', P.fail], [1, ' no Ethernet, no audio device listed)', P.fail], [0, 'Charging indicator: ON', P.pwr], [0, '→ suggests the break was before USB 2.0', P.aux]], false);
+  return svgWrap(1200, 940, s, 'Hypothesis: charging worked, USB connection state likely stuck before any USB enumeration, dock absent from Device Manager');
 }
 
 /* ================= FIG 06 — warm vs hardware reset ================= */
@@ -992,13 +1016,13 @@ function fig06() {
   };
   s += col(20, 'WINDOWS RESTART', 'warm reset · OS-controlled', [
     ['CPU → RESET', 'warn', 'core reset'], ['WINDOWS → RELOAD', 'main', 'drivers re-init'], ['BUT'],
-    ['AUX POWER RAIL → STILL ON', 'aux', 'never switched'], ['USB-C CONTROLLER → POWERED', 'aux', 'keeps its RAM'], ['STUCK STATE → SURVIVES', 'fail', 'same bad state']
+    ['AUX POWER RAIL → STILL ON', 'aux', 'never switched'], ['USB-C CONTROLLER → POWERED', 'aux', 'keeps its RAM'], ['STUCK STATE → SURVIVES?', 'fail', 'same bad state']
   ], [true, false, false], scope(20, false));
   s += col(620, 'HARDWARE POWER-STATE RESET', 'long power-button hold · EC-controlled', [
     ['EC / POWER SEQUENCER', 'aux', 'reads PWR_BTN#'], ['REGULATORS DISABLED', 'warn', 'EN pins low'], ['RELEVANT RAILS COLLAPSE', 'off', 'caps discharge'],
     ['CONTROLLER LOSES STATE', 'off', 'volatile cleared'], ['COLD INITIALISATION', 'main', 'firmware reloads'], ['USB-C NEGOTIATES AGAIN', 'pwr', 'CC → PD → Alt Mode']
   ], [true, true, true], scope(620, true));
-  return svgWrap(1200, 680, s, 'Windows restart versus hardware power-state reset');
+  return svgWrap(1200, 708, s + evTag(1200, 'PROPOSED MECHANISM · HYPOTHESIS', P.warn, 672), 'Proposed mechanism: Windows restart versus hardware power-state reset');
 }
 
 /* ================= FIG 07 — power rail map ================= */
@@ -1064,7 +1088,7 @@ function fig09() {
     `<path d="M100,82 V150" stroke="${P.ink}" stroke-width="3"/><circle cx="100" cy="154" r="5" fill="${P.ink}"/><path d="M100,158 L140,200" stroke="${P.ink}" stroke-width="3"/><circle cx="100" cy="214" r="5" fill="${P.ink}"/>` + T(150, 186, 'POWER BUTTON', 'ts tw') +
     `<path d="M100,218 V290 M66,290 H134 M78,302 H122 M90,314 H110" stroke="${P.ink}" stroke-width="3"/>` + T(150, 300, 'GROUND', 'ts tw') + `</g>`;
   s += `<path d="M90,150 L430,500 M430,150 L90,500" stroke="${P.fail}" stroke-width="18" stroke-linecap="round" opacity=".9" filter="url(#glow)"/>`;
-  s += T(260, 556, 'No such path exists on a modern laptop.', 'mid ts c-dim');
+  s += T(260, 556, 'Not how typical modern laptops are designed.', 'mid ts c-dim');
   // CORRECT
   s += `<rect x="520" y="20" width="660" height="560" rx="10" fill="#0a1611" stroke="${P.line}"/>` + TH(544, 62, 'REALITY', 'txl', `style="fill:${P.pwr}"`) + T(544, 86, 'The button is a logic input to the EC', 'tm c-dim');
   const chain = [['POWER BUTTON', 'ink'], ['PWR_BTN# · logic level', 'sig'], ['EMBEDDED CONTROLLER', 'aux'], ['POWER SEQUENCER', 'aux'], ['PMIC / REGULATORS', 'main'], ['POWER RAILS', 'main']];
@@ -1234,7 +1258,7 @@ function fig13() {
   });
   const ly = 590;
   s += `<circle cx="60" cy="${ly}" r="9" fill="${P.pwr}"/>` + T(76, ly + 4, 'cleared / re-initialised', 'ts') + `<circle cx="290" cy="${ly}" r="9" fill="none" stroke="${P.warn}" stroke-width="2"/><path d="M290,${ly - 9} A9,9 0 0 1 290,${ly + 9}Z" fill="${P.warn}"/>` + T(306, ly + 4, 'platform-dependent (rail wiring, dock VBUS, sealed battery)', 'ts') + `<circle cx="760" cy="${ly}" r="8" fill="none" stroke="#6c7c74" stroke-width="2"/>` + T(776, ly + 4, 'survives', 'ts');
-  s += T(40, 622, 'The incident: Level 1 did not fix it, a long hold (Level 2–3 territory) did → the stuck state lived in a domain a restart never powers down.', 'ts tw c-aux');
+  s += T(40, 622, 'This incident: Level 1 did not fix it, a long hold (Level 2–3) did → suggests the state lived in a domain a restart never powers down.', 'ts tw c-aux');
   return svgWrap(1200, 640, s, 'Five reset levels and what each clears');
 }
 
@@ -1278,8 +1302,8 @@ function fig14(compact = false) {
   });
   if (!compact) {
     s += `<rect x="40" y="${LY(5) + 76}" width="1110" height="92" rx="8" fill="#0a1611" stroke="${P.line}"/>`;
-    s += TH(60, LY(5) + 106, 'IS 45 SECONDS ACTUALLY SPECIAL?', '', 'style="font-size:19px"') + TH(420, LY(5) + 106, 'NO — IT IS MARGIN, NOT MAGIC.', '', `style="font-size:19px;fill:${P.pwr}"`);
-    s += T(60, LY(5) + 130, 'Every verified threshold above is ≤ 40 s. A 45 s hold passes all of them, so whichever one this laptop uses, it fired.', 'ts');
+    s += TH(60, LY(5) + 106, 'IS 45 SECONDS ACTUALLY SPECIAL?', '', 'style="font-size:19px"') + TH(420, LY(5) + 106, 'PROBABLY NOT — MOST LIKELY MARGIN, NOT MAGIC.', '', `style="font-size:19px;fill:${P.pwr}"`);
+    s += T(60, LY(5) + 130, 'Every documented threshold above is ≤ 40 s. A 45 s hold passes all of them, so it would have cleared whichever one this laptop uses.', 'ts');
     s += T(60, LY(5) + 150, 'Caution: Dell’s RTC reset aborts if held > 40 s with AC connected — longer is not automatically “deeper”.', 'ts', `style="fill:${P.warn}"`);
   }
   return svgWrap(1200, compact ? 560 : 700, s, 'Timeline of OEM-documented power-button reset procedures with 45 second marker');
@@ -1287,7 +1311,7 @@ function fig14(compact = false) {
 
 /* ================= FIG 15 — why 45 s may have worked ================= */
 function fig15() {
-  let s = TH(40, 44, 'WHY A 45-SECOND HOLD MAY HAVE WORKED', 'txl') + T(40, 64, 'Proportional bar · regulator + rail timing is board-dependent (ms → s); everything after it is margin', 'ts c-dim');
+  let s = evTag(1200) + TH(40, 44, 'WHY A 45-SECOND HOLD MAY HAVE WORKED', 'txl') + T(40, 64, 'Proportional bar · regulator + rail timing is board-dependent (ms → s); everything after it is margin', 'ts c-dim');
   const X0 = 60, X1 = 1140, tx = t => X0 + t / 45 * (X1 - X0);
   const steps = [
     [0, 'POWER BUTTON HELD', 'EC starts counting', P.ink],
@@ -1295,7 +1319,7 @@ function fig15() {
     [4.2, 'REGULATORS DISABLED', 'EC drops EN lines', P.warn],
     [5.2, 'RAILS COLLAPSE', 'capacitors drain through loads', P.aux],
     [6.2, 'RETENTION THRESHOLD CROSSED', 'controller can no longer hold state', P.fail],
-    [7.2, 'VOLATILE STATE LOST', 'stuck Alt Mode / mux state gone', P.off]
+    [7.2, 'VOLATILE STATE LOST', 'suspected stuck connection state cleared', P.off]
   ];
   steps.forEach(([t, n, d, c], i) => {
     const y = 100 + i * 52;
@@ -1386,7 +1410,7 @@ function fig16(ans = TREE_INCIDENT, sel = null) {
 /* compact horizontal version for the master infographic */
 function fig16h() {
   let s = '';
-  const steps = [['DOCK', 'CONNECTED', 'pwr'], ['CHARGING?', 'YES', 'pwr'], ['USB WORKING?', 'NO', 'fail'], ['DISPLAYS?', 'MISSING', 'fail'], ['IN DEVICE MGR?', 'NOT AT ALL', 'fail'], ['PRE-USB STATE', 'PD conn · EC', 'warn'], ['RESTART FIXED?', 'NO', 'fail'], ['HARD RESET', 'hold power', 'aux'], ['RETURNED?', 'YES', 'pwr'], ['TRANSIENT STATE', 'strong hypothesis', 'pwr']];
+  const steps = [['DOCK', 'CONNECTED', 'pwr'], ['CHARGING?', 'YES', 'pwr'], ['USB WORKING?', 'NO', 'fail'], ['DISPLAYS?', 'MISSING', 'fail'], ['IN DEVICE MGR?', 'NOT AT ALL', 'fail'], ['PRE-USB STATE?', 'PD conn · EC', 'warn'], ['RESTART FIXED?', 'NO', 'fail'], ['HARD RESET', 'hold power', 'aux'], ['RETURNED?', 'YES', 'pwr'], ['TRANSIENT STATE', 'strong hypothesis', 'pwr']];
   steps.forEach(([a, b, r], i) => {
     const x = 20 + i * 236, c = ROLE[r];
     s += `<rect x="${x}" y="40" width="204" height="86" rx="10" fill="${P.bg}" stroke="${c}" stroke-width="2.5" filter="url(#glow)"/>` + TH(x + 102, 78, a, 'mid', 'style="font-size:19px"') + T(x + 102, 104, b, 'mid tm tw', `style="fill:${c}"`);
@@ -1402,12 +1426,12 @@ function fig17() {
   const panel = (x, n, title, c) => `<rect x="${x}" y="20" width="380" height="600" rx="10" fill="#0a1611" stroke="${c}" stroke-opacity=".7"/>` + T(x + 20, 50, 'PANEL ' + n, 'ts tw', `style="fill:${c}"`) + TH(x + 20, 82, title, 'txl');
   const chip = (x, y, ok) => {
     const c = ok ? P.pwr : P.fail;
-    return `<g>${qfn(x, y, 120, 120, { label: 'PD CTRL', sub: ok ? 'FRESH STATE' : 'STUCK STATE' })}<rect x="${x - 10}" y="${y - 10}" width="140" height="140" rx="10" fill="${ok ? 'none' : 'url(#hatchRed)'}" stroke="${c}" stroke-width="3" filter="url(#glow)" ${ok ? '' : 'class="pulse"'}/></g>`;
+    return `<g>${qfn(x, y, 120, 120, { label: 'PD CTRL', sub: ok ? 'FRESH STATE' : 'STUCK STATE?' })}<rect x="${x - 10}" y="${y - 10}" width="140" height="140" rx="10" fill="${ok ? 'none' : 'url(#hatchRed)'}" stroke="${c}" stroke-width="3" filter="url(#glow)" ${ok ? '' : 'class="pulse"'}/></g>`;
   };
   // 1
   s += panel(20, 1, 'BEFORE', P.fail) + chip(150, 130, false);
   s += statusPill(60, 330, 'pwr', true, 'POWER', 300) + statusPill(60, 378, 'usb', false, 'USB', 300) + statusPill(60, 426, 'dp', false, 'DISPLAY', 300);
-  s += TL(60, 500, 'Contract is up and charging,\nbut the controller’s volatile state\nis wrong, and restart never\npowers it down.', 18, 'ts c-dim');
+  s += TL(60, 500, 'Observed: charging, no USB, no\ndisplays. Hypothesis: the\ncontroller’s volatile state was\nwrong and a restart never\npowered it down.', 18, 'ts c-dim');
   // 2
   s += panel(410, 2, 'RESET', P.aux);
   const ch = [['POWER BUTTON', 'ink'], ['EC', 'aux'], ['PMIC', 'warn'], ['RAILS COLLAPSE', 'off'], ['VOLTAGE DECAY', 'aux'], ['VOLATILE STATE LOST', 'fail']];
@@ -1429,7 +1453,7 @@ function fig17() {
   s += statusPill(840, 360, 'pwr', true, 'POWER', 300) + statusPill(840, 408, 'usb', true, 'USB · ETHERNET', 300) + statusPill(840, 456, 'dp', true, 'DISPLAYS', 300);
   s += TL(840, 530, 'Same hardware, clean state:\nthe chain re-negotiates\nfrom stage 1.', 18, 'ts c-dim');
   s += arrow('M400,320 H406', 'ink', 3) + arrow('M790,320 H796', 'ink', 3);
-  return svgWrap(1200, 640, s, 'Before, reset, after');
+  return svgWrap(1200, 640, s + evTag(1200, 'OBSERVED OUTCOME · HYPOTHESISED MECHANISM'), 'Before, reset, after');
 }
 
 /* ================= FIG 18 — exploded isometric laptop ================= */
@@ -1531,6 +1555,7 @@ function fig21(sel = null) {
     s += TH(x, y - (l2 ? 8 : 0), l1, 'mid', 'style="font-size:15px"') + (l2 ? TH(x, y + 10, l2, 'mid', 'style="font-size:15px"') : '');
     s += T(x, y + 28, h.verdict, 'mid ts tw', `style="fill:${c}"`) + `</g>`;
   });
+  s += evTag(1200, 'AI-ASSISTED ANALYSIS · NOT A CONFIRMED ROOT CAUSE');
   s += `<circle cx="${cx}" cy="${cy}" r="128" fill="#0a1611" stroke="${P.silk}" stroke-width="2"/>`;
   s += statusPill(cx - 95, cy - 88, 'pwr', true, 'CHARGING', 190) + statusPill(cx - 95, cy - 46, 'usb', false, 'USB', 190) + statusPill(cx - 95, cy - 4, 'dp', false, 'DISPLAY', 190);
   s += TH(cx, cy + 62, '45-SECOND RESET', 'mid', 'style="font-size:18px"') + TH(cx, cy + 84, 'FIXED IT', 'mid', `style="font-size:18px;fill:${P.pwr}"`);
@@ -1579,7 +1604,7 @@ class RailSim {
     this.v = {}; SIM_RAILS.forEach(r => this.v[r.id] = this.on[r.id] ? r.nom : 0);
     this.hist = SIM_RAILS.map(() => []);
     this.log.innerHTML = '';
-    this.note('Incident state: running (S0), dock attached, controller state STUCK.', 'fail');
+    this.note('Modelled incident (hypothesis): running (S0), dock attached, controller state STUCK.', 'fail');
     this.render();
   }
   get tauPd() { return parseFloat(this.root.querySelector('#sim-tau').value); }
@@ -1739,10 +1764,10 @@ function masterSVG(standalone = false) {
   let s = `<rect width="${W}" height="2860" fill="${P.bg}"/><rect width="${W}" height="2860" fill="url(#pcbTex)" opacity=".35"/>`;
   // header
   s += `<rect x="0" y="0" width="${W}" height="230" fill="#07140d"/><path d="M0,230 H${W}" stroke="${P.maskLine}" stroke-width="2"/>`;
-  s += T(60, 58, 'ENGINEERING TRAINING MODULE · USB-C / PLATFORM POWER · REV A', 'tm tw c-dim');
+  s += T(60, 58, 'ENGINEERING TRAINING MODULE · USB-C / PLATFORM POWER · AI-ASSISTED HYPOTHESIS · REV B', 'tm tw c-dim');
   s += TH(60, 128, 'USB-C DOCK FAILURE EXPLAINED', '', 'style="font-size:76px"');
   s += T(62, 172, 'HP USB-C Dock G5 → Windows business laptop · charging kept working · USB, Ethernet, displays gone — dock absent from Device Manager · restart did not help · ≈45 s hold fixed it', 'tm c-dim');
-  s += T(62, 202, 'Representative architecture — exact implementation varies by model. The successful reset does not prove which controller failed.', 'tm', `style="fill:${P.aux}"`);
+  s += T(62, 202, 'AI-assisted analysis · the explanation is a HYPOTHESIS, not a confirmed root cause · representative architecture, varies by model.', 'tm', `style="fill:${P.aux}"`);
   s += `<g transform="translate(1690,52) scale(1.25)">` + statusPill(0, 0, 'pwr', true, 'CHARGING', 200) + statusPill(0, 42, 'usb', false, 'USB · LAN', 200) + statusPill(0, 84, 'dp', false, 'DISPLAYS', 200) + `</g>`;
   s += TH(2004, 128, '→', 'mid', 'style="font-size:54px"') + T(2004, 160, '45 s hold', 'mid tm tw c-aux');
   s += `<g transform="translate(2090,52) scale(1.25)">` + statusPill(0, 0, 'pwr', true, '', 230 / 1.25 - 10) + statusPill(0, 42, 'usb', true, '', 230 / 1.25 - 10) + statusPill(0, 84, 'dp', true, '', 230 / 1.25 - 10) + `</g>`;
@@ -1756,7 +1781,7 @@ function masterSVG(standalone = false) {
   let a = nest(boardSVG('failure', { flow: false }), col[0] + 10, y + 56, cw - 20), b = nest(fig02(), col[1] + 10, y + 56, cw - 20);
   let rh = Math.max(a.h, b.h) + 76;
   s += frame(col[0], y, cw, rh, '01', 'PCB MOTHERBOARD · WHERE THE STATE LIVES') + a.s + frame(col[1], y, cw, rh, '02', 'USB-C SIGNAL PATH · ONE CONNECTOR, THREE JOBS') + b.s;
-  s += `<g transform="translate(${col[1] + 40},${y + 56 + b.h + 8})">` + TL(0, 0, 'Power finished early and stayed up. Not even USB 2.0 enumerated, so the stuck step sits\nbefore data AND display: the USB connection / data-role state the PD controller reports.', 26, 'tm', 'style="fill:#cfdcd2"') + `</g>`;
+  s += `<g transform="translate(${col[1] + 40},${y + 56 + b.h + 8})">` + TL(0, 0, 'Observed: power stayed up; not even USB 2.0 enumerated. Hypothesis: the stuck step sat before\ndata AND display, most likely the USB connection / data-role state the PD controller reports.', 26, 'tm', 'style="fill:#cfdcd2"') + `</g>`;
   y += rh + 30;
   // row 2
   a = nest(fig10(1.2, 1, true), col[0] + 10, y + 70, cw - 20); b = nest(fig06(), col[1] + 10, y + 56, cw - 20);
@@ -1768,13 +1793,13 @@ function masterSVG(standalone = false) {
   a = nest(fig14(true), col[0] + 10, y + 56, cw - 20); b = nest(fig04(), col[1] + 10, y + 56, cw - 20);
   rh = Math.max(a.h, b.h) + 110;
   s += frame(col[0], y, cw, rh, '05', 'RESET TIMELINE · IS 45 s SPECIAL?') + a.s + frame(col[1], y, cw, rh, '06', 'USB-C REINITIALISATION · CC → PD → ALT → USB → OS') + b.s;
-  s += T(col[0] + 40, y + rh - 26, 'No verified procedure needs 45 s; all documented thresholds are ≤ 40 s. 45 s = margin, not magic.', 'tm tw c-pwr');
-  s += T(col[1] + 40, y + rh - 26, 'After a clean reset, the chain re-runs from stage 1 and every function returns.', 'tm tw c-pwr');
+  s += T(col[0] + 40, y + rh - 26, 'No documented procedure needs 45 s; all documented thresholds are ≤ 40 s. 45 s most likely = margin, not magic.', 'tm tw c-pwr');
+  s += T(col[1] + 40, y + rh - 26, 'Observed: after the reset every function returned, consistent with the chain re-running from stage 1.', 'tm tw c-pwr');
   y += rh + 30;
   // row 4
   b = nest(fig16h(), 50, y + 66, W - 100);
   rh = b.h + 90;
-  s += frame(40, y, W - 80, rh, '07', 'DIAGNOSTIC DECISION PATH · THIS INCIDENT') + b.s;
+  s += frame(40, y, W - 80, rh, '07', 'DIAGNOSTIC DECISION PATH · THIS INCIDENT (AI-SUGGESTED)') + b.s;
   y += rh + 24;
   s += T(60, y + 10, 'Sources: ACPI 6.5 §4.8.2.2.1.3 · HP Support “Perform a power reset” · HP USB-C Dock G5 datasheet + SoftPaq firmware notes · Dell KB 000139016, 000125880 · Lenovo HT510479 · Microsoft Support 4036280', 'ts c-mute');
   const H = y + 40;
@@ -1914,7 +1939,7 @@ function masterSVG(standalone = false) {
 
   /* ---- FIG 22 myth cards ---- */
   const MYTHS = [
-    ['“Static electricity was trapped.”', 'More likely a controller, power-state or negotiation issue.', 'Charge on rails is ordinary capacitor energy that drains in ms–s. The fix pattern points to volatile controller state.'],
+    ['“Static electricity was trapped.”', 'More likely a controller, power-state or negotiation issue (our hypothesis).', 'Charge on rails is ordinary capacitor energy that drains in ms–s. The fix pattern points to volatile controller state.'],
     ['“The power button drains the motherboard.”', 'The button sends a logic signal to the EC / power sequencer.', 'Current through it is set by a pull-up resistor, e.g. 3.3 V ÷ 100 kΩ ≈ 33 µA. Rails drain through loads and bleeders.'],
     ['“45 seconds clears CMOS.”', 'Not generally.', 'Dell’s documented RTC reset is 25–40 s with AC connected, and holding > 40 s aborts it. Other OEMs use jumpers, key combos or setup menus.'],
     ['“The EC carries USB data.”', 'USB data travels through USB controllers, PHYs and the mux path.', 'The EC manages power, battery, keyboard and often configures the PD controller over I²C, but it does not carry USB data.'],

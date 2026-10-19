@@ -37,7 +37,7 @@ class RailSim {
     this.v = {}; SIM_RAILS.forEach(r => this.v[r.id] = this.on[r.id] ? r.nom : 0);
     this.hist = SIM_RAILS.map(() => []);
     this.log.innerHTML = '';
-    this.note('Incident state: running (S0), dock attached, controller state STUCK.', 'fail');
+    this.note('Modelled incident (hypothesis): running (S0), dock attached, controller state STUCK.', 'fail');
     this.render();
   }
   get tauPd() { return parseFloat(this.root.querySelector('#sim-tau').value); }

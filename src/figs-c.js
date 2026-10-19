@@ -67,7 +67,7 @@ function fig16(ans = TREE_INCIDENT, sel = null) {
 /* compact horizontal version for the master infographic */
 function fig16h() {
   let s = '';
-  const steps = [['DOCK', 'CONNECTED', 'pwr'], ['CHARGING?', 'YES', 'pwr'], ['USB WORKING?', 'NO', 'fail'], ['DISPLAYS?', 'MISSING', 'fail'], ['IN DEVICE MGR?', 'NOT AT ALL', 'fail'], ['PRE-USB STATE', 'PD conn · EC', 'warn'], ['RESTART FIXED?', 'NO', 'fail'], ['HARD RESET', 'hold power', 'aux'], ['RETURNED?', 'YES', 'pwr'], ['TRANSIENT STATE', 'strong hypothesis', 'pwr']];
+  const steps = [['DOCK', 'CONNECTED', 'pwr'], ['CHARGING?', 'YES', 'pwr'], ['USB WORKING?', 'NO', 'fail'], ['DISPLAYS?', 'MISSING', 'fail'], ['IN DEVICE MGR?', 'NOT AT ALL', 'fail'], ['PRE-USB STATE?', 'PD conn · EC', 'warn'], ['RESTART FIXED?', 'NO', 'fail'], ['HARD RESET', 'hold power', 'aux'], ['RETURNED?', 'YES', 'pwr'], ['TRANSIENT STATE', 'strong hypothesis', 'pwr']];
   steps.forEach(([a, b, r], i) => {
     const x = 20 + i * 236, c = ROLE[r];
     s += `<rect x="${x}" y="40" width="204" height="86" rx="10" fill="${P.bg}" stroke="${c}" stroke-width="2.5" filter="url(#glow)"/>` + TH(x + 102, 78, a, 'mid', 'style="font-size:19px"') + T(x + 102, 104, b, 'mid tm tw', `style="fill:${c}"`);
@@ -83,12 +83,12 @@ function fig17() {
   const panel = (x, n, title, c) => `<rect x="${x}" y="20" width="380" height="600" rx="10" fill="#0a1611" stroke="${c}" stroke-opacity=".7"/>` + T(x + 20, 50, 'PANEL ' + n, 'ts tw', `style="fill:${c}"`) + TH(x + 20, 82, title, 'txl');
   const chip = (x, y, ok) => {
     const c = ok ? P.pwr : P.fail;
-    return `<g>${qfn(x, y, 120, 120, { label: 'PD CTRL', sub: ok ? 'FRESH STATE' : 'STUCK STATE' })}<rect x="${x - 10}" y="${y - 10}" width="140" height="140" rx="10" fill="${ok ? 'none' : 'url(#hatchRed)'}" stroke="${c}" stroke-width="3" filter="url(#glow)" ${ok ? '' : 'class="pulse"'}/></g>`;
+    return `<g>${qfn(x, y, 120, 120, { label: 'PD CTRL', sub: ok ? 'FRESH STATE' : 'STUCK STATE?' })}<rect x="${x - 10}" y="${y - 10}" width="140" height="140" rx="10" fill="${ok ? 'none' : 'url(#hatchRed)'}" stroke="${c}" stroke-width="3" filter="url(#glow)" ${ok ? '' : 'class="pulse"'}/></g>`;
   };
   // 1
   s += panel(20, 1, 'BEFORE', P.fail) + chip(150, 130, false);
   s += statusPill(60, 330, 'pwr', true, 'POWER', 300) + statusPill(60, 378, 'usb', false, 'USB', 300) + statusPill(60, 426, 'dp', false, 'DISPLAY', 300);
-  s += TL(60, 500, 'Contract is up and charging,\nbut the controller’s volatile state\nis wrong, and restart never\npowers it down.', 18, 'ts c-dim');
+  s += TL(60, 500, 'Observed: charging, no USB, no\ndisplays. Hypothesis: the\ncontroller’s volatile state was\nwrong and a restart never\npowered it down.', 18, 'ts c-dim');
   // 2
   s += panel(410, 2, 'RESET', P.aux);
   const ch = [['POWER BUTTON', 'ink'], ['EC', 'aux'], ['PMIC', 'warn'], ['RAILS COLLAPSE', 'off'], ['VOLTAGE DECAY', 'aux'], ['VOLATILE STATE LOST', 'fail']];
@@ -110,7 +110,7 @@ function fig17() {
   s += statusPill(840, 360, 'pwr', true, 'POWER', 300) + statusPill(840, 408, 'usb', true, 'USB · ETHERNET', 300) + statusPill(840, 456, 'dp', true, 'DISPLAYS', 300);
   s += TL(840, 530, 'Same hardware, clean state:\nthe chain re-negotiates\nfrom stage 1.', 18, 'ts c-dim');
   s += arrow('M400,320 H406', 'ink', 3) + arrow('M790,320 H796', 'ink', 3);
-  return svgWrap(1200, 640, s, 'Before, reset, after');
+  return svgWrap(1200, 640, s + evTag(1200, 'OBSERVED OUTCOME · HYPOTHESISED MECHANISM'), 'Before, reset, after');
 }
 
 /* ================= FIG 18 — exploded isometric laptop ================= */
@@ -212,6 +212,7 @@ function fig21(sel = null) {
     s += TH(x, y - (l2 ? 8 : 0), l1, 'mid', 'style="font-size:15px"') + (l2 ? TH(x, y + 10, l2, 'mid', 'style="font-size:15px"') : '');
     s += T(x, y + 28, h.verdict, 'mid ts tw', `style="fill:${c}"`) + `</g>`;
   });
+  s += evTag(1200, 'AI-ASSISTED ANALYSIS · NOT A CONFIRMED ROOT CAUSE');
   s += `<circle cx="${cx}" cy="${cy}" r="128" fill="#0a1611" stroke="${P.silk}" stroke-width="2"/>`;
   s += statusPill(cx - 95, cy - 88, 'pwr', true, 'CHARGING', 190) + statusPill(cx - 95, cy - 46, 'usb', false, 'USB', 190) + statusPill(cx - 95, cy - 4, 'dp', false, 'DISPLAY', 190);
   s += TH(cx, cy + 62, '45-SECOND RESET', 'mid', 'style="font-size:18px"') + TH(cx, cy + 84, 'FIXED IT', 'mid', `style="font-size:18px;fill:${P.pwr}"`);

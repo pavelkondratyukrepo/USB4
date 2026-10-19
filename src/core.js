@@ -98,6 +98,12 @@ function tag(x, y, s, color, fill = P.bg, cls = 'ts') {
   return `<g transform="translate(${x},${y})"><rect x="0" y="-12" width="${w}" height="17" rx="3" fill="${fill}" stroke="${color}" stroke-width="1"/>${T(7, 0.5, s, cls, `style="fill:${color}"`)}</g>`;
 }
 
+/* evidence-status pill drawn in a figure's top-right corner */
+function evTag(w, label = 'HYPOTHESIS · AI-ASSISTED ANALYSIS', color = P.warn, y = 18) {
+  const tw = label.length * 6.6 + 26;
+  return `<g transform="translate(${w - tw - 24},${y})"><rect width="${tw}" height="24" rx="12" fill="${P.bg}" stroke="${color}" stroke-width="1.4" stroke-dasharray="5 3"/>` + T(13, 16, label, 'ts tw', `style="fill:${color}"`) + `</g>`;
+}
+
 /* ---------- PCB part packages ---------- */
 function qfn(x, y, w, h, o = {}) {
   let s = '';

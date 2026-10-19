@@ -41,6 +41,14 @@ h1 span { color: var(--pwr); text-shadow: 0 0 22px rgba(61, 220, 132, .35); }
 .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--f-mono); font-size: 12px; color: var(--ink-2); }
 .legend i { display: inline-block; width: 22px; height: 6px; border-radius: 3px; margin-right: 7px; vertical-align: middle; }
 
+/* analysis status + evidence tags */
+.status { border: 1.5px dashed var(--warn); border-radius: 10px; padding: 14px 16px; background: rgba(255, 159, 26, .06); display: grid; gap: 8px; max-width: 110ch; }
+.status-h { font-family: var(--f-mono); font-size: 12px; font-weight: 700; letter-spacing: .14em; color: var(--warn); }
+.status p { margin: 0; font-size: 14px; color: #d9e3dc; }
+.ev-key { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; align-items: center; font-size: 13px; color: var(--ink-2); }
+.ev { display: inline-block; justify-self: start; font-family: var(--f-mono); font-size: 10.5px; font-weight: 700; letter-spacing: .1em; padding: 2px 8px; border-radius: 4px; border: 1px solid currentColor; white-space: nowrap; }
+.ev.obs { color: var(--silk); } .ev.doc { color: var(--pwr); } .ev.typ { color: var(--main); } .ev.ill { color: #9fb0a6; } .ev.hyp { color: var(--warn); border-style: dashed; }
+
 /* layout */
 .layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 28px; padding-block: 28px; }
 .toc { position: sticky; top: env(safe-area-inset-top, 0px); align-self: start; max-height: 100vh; overflow-y: auto; padding-block: 8px; display: flex; flex-direction: column; gap: 1px; font-family: var(--f-mono); font-size: 12.5px; }
